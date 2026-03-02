@@ -49,12 +49,18 @@ func (c *Client) GetOrchestrationHistory(ctx context.Context, instanceID, execut
 		return nil, err
 	}
 
-	// History is returned as a JSON array of protobuf-json events
-	var events []HistoryEvent
-	if err := decodeJSON(resp, &events); err != nil {
+	// The API returns a protobuf-JSON wrapper: {"history": [ ...events... ]}
+	// Try to decode as a wrapper first, then fall back to a direct array.
+	var wrapper struct {
+		History []HistoryEvent `json:"history"`
+	}
+	if err := decodeJSON(resp, &wrapper); err != nil {
 		return nil, fmt.Errorf("decoding history: %w", err)
 	}
-	return events, nil
+	if wrapper.History != nil {
+		return wrapper.History, nil
+	}
+	return nil, nil
 }
 
 // CreateOrchestration creates a new orchestration instance.

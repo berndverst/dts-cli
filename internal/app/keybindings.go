@@ -5,7 +5,7 @@ import "github.com/gdamore/tcell/v2"
 // globalKeyHandler handles application-wide key events.
 func (a *App) globalKeyHandler(event *tcell.EventKey) *tcell.EventKey {
 	// Don't intercept keys when a dialog/modal is showing
-	if name, _ := a.pages.GetFrontPage(); name == "confirm" || name == "input" || name == "multi-input" {
+	if name, _ := a.pages.GetFrontPage(); name == "confirm" || name == "input" || name == "multi-input" || name == "json-viewer" {
 		return event
 	}
 
