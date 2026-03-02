@@ -22,14 +22,15 @@ type OrchestrationsView struct {
 	summary *tview.TextView
 
 	// State
-	data         []api.Orchestration
-	trivia       *api.OrchestrationTrivia
-	pageIndex    int
-	pageSize     int
-	filter       *api.OrchestrationFilter
-	sortCol      string
-	sortDir      string
-	statusFilter string // Quick filter: "" = all
+	data          []api.Orchestration
+	trivia        *api.OrchestrationTrivia
+	pageIndex     int
+	pageSize      int
+	filter        *api.OrchestrationFilter
+	sortCol       string
+	sortDir       string
+	statusFilter  string // Quick filter: "" = all
+	pendingSelect int    // 0=default, 1=first row, -1=last row
 }
 
 // NewOrchestrationsView creates the orchestrations list view.
@@ -116,9 +117,11 @@ func NewOrchestrationsView(a *app.App) *OrchestrationsView {
 			v.setQuickFilter(api.StatusPending)
 			return nil
 		case '[':
+			v.pendingSelect = 1
 			v.prevPage()
 			return nil
 		case ']':
+			v.pendingSelect = 1
 			v.nextPage()
 			return nil
 		case 'o':
@@ -141,6 +144,16 @@ func NewOrchestrationsView(a *app.App) *OrchestrationsView {
 			return nil
 		}
 		return event
+	})
+
+	v.table.SetBoundaryHandler(func(direction int) {
+		if direction > 0 {
+			v.pendingSelect = 1
+			v.nextPage()
+		} else {
+			v.pendingSelect = -1
+			v.prevPage()
+		}
 	})
 
 	v.flex = tview.NewFlex().SetDirection(tview.FlexRow).
@@ -167,7 +180,7 @@ func (v *OrchestrationsView) Hints() []components.KeyHint {
 		{Key: "o", Description: "Sort"},
 		{Key: "O", Description: "Asc/Desc"},
 		{Key: "1-5", Description: "Filter"},
-		{Key: "[/]", Description: "Page"},
+		{Key: "[]", Description: "Page"},
 	}
 }
 
@@ -229,6 +242,12 @@ func (v *OrchestrationsView) Init(ctx context.Context) {
 	v.app.QueueUpdateDraw(func() {
 		v.renderSummary()
 		v.renderTable()
+		if v.pendingSelect == -1 {
+			v.table.Select(v.table.GetRowCount()-1, 0)
+		} else if v.pendingSelect == 1 {
+			v.table.Select(1, 0)
+		}
+		v.pendingSelect = 0
 	})
 }
 
@@ -244,13 +263,15 @@ func (v *OrchestrationsView) renderSummary() {
 		}
 		return fmt.Sprintf("[white]%s:[gray]%d[-]", label, count)
 	}
-	text := fmt.Sprintf(" %s │ %s │ %s │ %s │ %s  [gray]Page %d (showing %d of %d)[-]",
+	start := v.pageIndex*v.pageSize + 1
+	end := v.pageIndex*v.pageSize + len(v.data)
+	text := fmt.Sprintf(" %s │ %s │ %s │ %s │ %s  [gray]Page %d (showing %d-%d of %d)[-]",
 		active("All", t.TotalCount, ""),
 		active("Running", t.RunningCount, api.StatusRunning),
 		active("Completed", t.CompletedCount, api.StatusCompleted),
 		active("Failed", t.FailedCount, api.StatusFailed),
 		active("Pending", t.PendingCount, api.StatusPending),
-		v.pageIndex+1, len(v.data), t.TotalCount,
+		v.pageIndex+1, start, end, t.TotalCount,
 	)
 	v.summary.SetText(text)
 }

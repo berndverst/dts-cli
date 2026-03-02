@@ -20,9 +20,10 @@ type EntitiesView struct {
 	flex  *tview.Flex
 	info  *tview.TextView
 
-	data       []api.Entity
-	pageIndex  int
-	totalCount int
+	data          []api.Entity
+	pageIndex     int
+	totalCount    int
+	pendingSelect int // 0=default, 1=first row, -1=last row
 }
 
 // NewEntitiesView creates the entities list view.
@@ -57,13 +58,25 @@ func NewEntitiesView(a *app.App) *EntitiesView {
 			v.deleteSelected() // purge is same as delete for entities
 			return nil
 		case '[':
+			v.pendingSelect = 1
 			v.prevPage()
 			return nil
 		case ']':
+			v.pendingSelect = 1
 			v.nextPage()
 			return nil
 		}
 		return event
+	})
+
+	v.table.SetBoundaryHandler(func(direction int) {
+		if direction > 0 {
+			v.pendingSelect = 1
+			v.nextPage()
+		} else {
+			v.pendingSelect = -1
+			v.prevPage()
+		}
 	})
 
 	v.flex = tview.NewFlex().SetDirection(tview.FlexRow).
@@ -84,7 +97,7 @@ func (v *EntitiesView) Hints() []components.KeyHint {
 		{Key: "Enter", Description: "Detail"},
 		{Key: "d", Description: "Delete"},
 		{Key: "Space", Description: "Select"},
-		{Key: "[/]", Description: "Page"},
+		{Key: "[]", Description: "Page"},
 	}
 }
 
@@ -133,8 +146,16 @@ func (v *EntitiesView) Init(ctx context.Context) {
 	v.totalCount = result.TotalCount
 
 	v.app.QueueUpdateDraw(func() {
-		v.info.SetText(fmt.Sprintf(" [white]Entities[-] [gray](%d shown, %d total)[-]", len(v.data), v.totalCount))
+		start := v.pageIndex*v.app.Config.Settings.PageSize + 1
+		end := v.pageIndex*v.app.Config.Settings.PageSize + len(v.data)
+		v.info.SetText(fmt.Sprintf(" [white]Entities[-] [gray](showing %d-%d of %d)[-]", start, end, v.totalCount))
 		v.renderTable()
+		if v.pendingSelect == -1 {
+			v.table.Select(v.table.GetRowCount()-1, 0)
+		} else if v.pendingSelect == 1 {
+			v.table.Select(1, 0)
+		}
+		v.pendingSelect = 0
 	})
 }
 

@@ -15,6 +15,7 @@ type ResourceTable struct {
 	sortAscending bool
 	onSort        func(column int, ascending bool)
 	onSelect      func(row int)
+	onBoundary    func(direction int) // -1 = up past first row, +1 = down past last row
 }
 
 // NewResourceTable creates a new resource table with column headers.
@@ -52,6 +53,53 @@ func NewResourceTable(headers []string) *ResourceTable {
 // SetSortHandler sets the callback for sort column changes.
 func (t *ResourceTable) SetSortHandler(handler func(column int, ascending bool)) {
 	t.onSort = handler
+}
+
+// SetBoundaryHandler sets the callback for when cursor navigation would go past
+// the first or last data row. direction is -1 (up past first) or +1 (down past last).
+// This wraps any existing InputCapture set on the table, so call it AFTER SetInputCapture.
+func (t *ResourceTable) SetBoundaryHandler(handler func(direction int)) {
+	t.onBoundary = handler
+
+	existing := t.GetInputCapture()
+	t.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Let existing handler run first (for view-specific keys)
+		if existing != nil {
+			event = existing(event)
+			if event == nil {
+				return nil
+			}
+		}
+
+		if handler == nil {
+			return event
+		}
+
+		isDown := event.Key() == tcell.KeyDown || (event.Key() == tcell.KeyRune && event.Rune() == 'j')
+		isUp := event.Key() == tcell.KeyUp || (event.Key() == tcell.KeyRune && event.Rune() == 'k')
+
+		if !isDown && !isUp {
+			return event
+		}
+
+		row, _ := t.GetSelection()
+		dataRows := t.DataRowCount()
+		if dataRows == 0 {
+			return event
+		}
+
+		// row is 1-based (header=0). First data row=1, last=dataRows.
+		if isDown && row >= dataRows {
+			handler(1)
+			return nil
+		}
+		if isUp && row <= 1 {
+			handler(-1)
+			return nil
+		}
+
+		return event
+	})
 }
 
 // SetSelectHandler sets the callback for row selection (Enter key).

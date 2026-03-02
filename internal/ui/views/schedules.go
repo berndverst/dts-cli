@@ -24,6 +24,7 @@ type SchedulesView struct {
 	nextPageToken  string
 	prevPageTokens []string
 	currentToken   string
+	pendingSelect  int // 0=default, 1=first row, -1=last row
 }
 
 // NewSchedulesView creates the schedules list view.
@@ -55,13 +56,25 @@ func NewSchedulesView(a *app.App) *SchedulesView {
 			v.deleteSelected()
 			return nil
 		case '[':
+			v.pendingSelect = 1
 			v.prevPage()
 			return nil
 		case ']':
+			v.pendingSelect = 1
 			v.nextPage()
 			return nil
 		}
 		return event
+	})
+
+	v.table.SetBoundaryHandler(func(direction int) {
+		if direction > 0 {
+			v.pendingSelect = 1
+			v.nextPage()
+		} else {
+			v.pendingSelect = -1
+			v.prevPage()
+		}
 	})
 
 	v.flex = tview.NewFlex().SetDirection(tview.FlexRow).
@@ -84,7 +97,7 @@ func (v *SchedulesView) Hints() []components.KeyHint {
 		{Key: "s", Description: "Pause"},
 		{Key: "u", Description: "Resume"},
 		{Key: "d", Description: "Delete"},
-		{Key: "[/]", Description: "Page"},
+		{Key: "[]", Description: "Page"},
 	}
 }
 
@@ -112,6 +125,12 @@ func (v *SchedulesView) Init(ctx context.Context) {
 	v.app.QueueUpdateDraw(func() {
 		v.info.SetText(fmt.Sprintf(" [white]Schedules[-] [gray](%d shown)[-]", len(v.data)))
 		v.renderTable()
+		if v.pendingSelect == -1 {
+			v.table.Select(v.table.GetRowCount()-1, 0)
+		} else if v.pendingSelect == 1 {
+			v.table.Select(1, 0)
+		}
+		v.pendingSelect = 0
 	})
 }
 
