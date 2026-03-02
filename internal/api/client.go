@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -15,21 +16,33 @@ import (
 
 // Client is the DTS Backend API HTTP client.
 type Client struct {
-	baseURL  string
-	taskHub  string
-	token    *auth.TokenProvider
-	http     *http.Client
+	baseURL string
+	taskHub string
+	token   *auth.TokenProvider
+	http    *http.Client
 }
 
 // NewClient creates a new DTS API client.
 func NewClient(baseURL, taskHub string, tokenProvider *auth.TokenProvider) *Client {
 	baseURL = strings.TrimRight(baseURL, "/")
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:  true,
+		DisableCompression: false,
+	}
 	return &Client{
 		baseURL: baseURL,
 		taskHub: taskHub,
 		token:   tokenProvider,
 		http: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 	}
 }

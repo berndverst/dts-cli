@@ -171,6 +171,11 @@ func (v *OrchestrationDetailView) Init(ctx context.Context) {
 		return
 	}
 
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.header.SetText(" [gray]Loading orchestration details...[-]")
+	})
+
 	orchCh := make(chan *api.Orchestration)
 	payloadsCh := make(chan *api.OrchestrationPayloads)
 	historyCh := make(chan []api.HistoryEvent)
@@ -332,27 +337,20 @@ func (v *OrchestrationDetailView) renderHistory() {
 	local := v.app.Config.UseLocalTime()
 
 	row := 0
-	for _, event := range v.events {
-		eventType := detectEventType(event)
+	for i := range v.events {
+		event := &v.events[i]
+		eventType := event.Type()
 		if eventType == "Unknown" {
 			continue
 		}
 		ts := ""
-		timestamp := parseEventTimestamp(event)
+		timestamp := event.ParseTimestamp()
 		if !timestamp.IsZero() {
 			ts = util.FormatTimestamp(timestamp, local)
 		}
-		name := extractEventName(event, eventType)
-
-		// Event ID
-		eventID := ""
-		id := extractEventID(event)
-		if id >= 0 {
-			eventID = fmt.Sprintf("%d", id)
-		}
-
-		// Tags (from nested oneof)
-		tags := extractEventTags(event, eventType)
+		name := event.EventName()
+		eventID := fmt.Sprintf("%d", event.EventID)
+		tags := event.FormatTags()
 
 		v.history.SetDataRow(row,
 			fmt.Sprintf("%d", row+1),
@@ -665,16 +663,17 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 	pending := make(map[int]*pendingEvent)
 	var entries []timelineEntry
 
-	for _, event := range v.events {
-		eventType := detectEventType(event)
-		timestamp := parseEventTimestamp(event)
+	for i := range v.events {
+		event := &v.events[i]
+		eventType := event.Type()
+		timestamp := event.ParseTimestamp()
 		if timestamp.IsZero() {
 			continue
 		}
 
 		switch eventType {
 		case "ExecutionStarted":
-			name := extractEventName(event, eventType)
+			name := event.EventName()
 			if name == "" {
 				name = v.instanceID
 			}
@@ -704,15 +703,15 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "TaskScheduled":
-			id := extractEventID(event)
-			name := extractEventName(event, eventType)
+			id := event.EventID
+			name := event.EventName()
 			if name == "" {
 				name = "Activity"
 			}
 			pending[id] = &pendingEvent{name: name, category: "Activity", startTime: timestamp}
 
 		case "TaskCompleted":
-			scheduledID := extractScheduledID(event)
+			scheduledID := event.ScheduledID()
 			if p, ok := pending[scheduledID]; ok {
 				t := timestamp
 				entries = append(entries, timelineEntry{
@@ -723,7 +722,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "TaskFailed":
-			scheduledID := extractScheduledID(event)
+			scheduledID := event.ScheduledID()
 			if p, ok := pending[scheduledID]; ok {
 				t := timestamp
 				entries = append(entries, timelineEntry{
@@ -734,15 +733,15 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "SubOrchestrationInstanceCreated":
-			id := extractEventID(event)
-			name := extractEventName(event, eventType)
+			id := event.EventID
+			name := event.EventName()
 			if name == "" {
 				name = "SubOrchestration"
 			}
 			pending[id] = &pendingEvent{name: name, category: "SubOrchestration", startTime: timestamp}
 
 		case "SubOrchestrationInstanceCompleted":
-			scheduledID := extractScheduledID(event)
+			scheduledID := event.ScheduledID()
 			if p, ok := pending[scheduledID]; ok {
 				t := timestamp
 				entries = append(entries, timelineEntry{
@@ -753,7 +752,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "SubOrchestrationInstanceFailed":
-			scheduledID := extractScheduledID(event)
+			scheduledID := event.ScheduledID()
 			if p, ok := pending[scheduledID]; ok {
 				t := timestamp
 				entries = append(entries, timelineEntry{
@@ -764,11 +763,11 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "TimerCreated":
-			id := extractEventID(event)
+			id := event.EventID
 			pending[id] = &pendingEvent{name: "Timer", category: "Timer", startTime: timestamp}
 
 		case "TimerFired":
-			timerID := extractTimerID(event)
+			timerID := event.FiredTimerID()
 			if p, ok := pending[timerID]; ok {
 				t := timestamp
 				entries = append(entries, timelineEntry{
@@ -779,7 +778,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "EventRaised":
-			name := extractEventName(event, eventType)
+			name := event.EventName()
 			if name == "" {
 				name = "Event"
 			}
@@ -789,7 +788,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			})
 
 		case "EventSent":
-			name := extractEventName(event, eventType)
+			name := event.EventName()
 			if name == "" {
 				name = "Sent Event"
 			}
@@ -816,187 +815,6 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 	return entries
 }
 
-// detectEventType determines the event type from a history event map.
-// Handles both explicit EventType field and protobuf-JSON oneof encoding.
-func detectEventType(event api.HistoryEvent) string {
-	// Check for explicit EventType field (flattened format)
-	if et, ok := event["EventType"]; ok && et != nil {
-		s := fmt.Sprintf("%v", et)
-		if s != "" && s != "<nil>" {
-			return s
-		}
-	}
-
-	// Fall back to protobuf-JSON oneof detection (camelCase keys)
-	protoKeys := map[string]string{
-		"executionStarted":                  "ExecutionStarted",
-		"executionCompleted":                "ExecutionCompleted",
-		"executionFailed":                   "ExecutionFailed",
-		"executionTerminated":               "ExecutionTerminated",
-		"taskScheduled":                     "TaskScheduled",
-		"taskCompleted":                     "TaskCompleted",
-		"taskFailed":                        "TaskFailed",
-		"subOrchestrationInstanceCreated":   "SubOrchestrationInstanceCreated",
-		"subOrchestrationInstanceCompleted": "SubOrchestrationInstanceCompleted",
-		"subOrchestrationInstanceFailed":    "SubOrchestrationInstanceFailed",
-		"timerCreated":                      "TimerCreated",
-		"timerFired":                        "TimerFired",
-		"eventRaised":                       "EventRaised",
-		"eventSent":                         "EventSent",
-		"executionSuspended":                "ExecutionSuspended",
-		"executionResumed":                  "ExecutionResumed",
-	}
-	for key, name := range protoKeys {
-		if _, ok := event[key]; ok {
-			return name
-		}
-	}
-	return "Unknown"
-}
-
-// parseEventTimestamp extracts the timestamp from a history event.
-func parseEventTimestamp(event api.HistoryEvent) time.Time {
-	if t, ok := event["Timestamp"].(string); ok {
-		if parsed, err := time.Parse(time.RFC3339Nano, t); err == nil {
-			return parsed
-		}
-	}
-	if t, ok := event["timestamp"].(string); ok {
-		if parsed, err := time.Parse(time.RFC3339Nano, t); err == nil {
-			return parsed
-		}
-	}
-	return time.Time{}
-}
-
-// extractEventName extracts the name from a history event.
-func extractEventName(event api.HistoryEvent, eventType string) string {
-	// Check top-level Name field
-	if n, ok := event["Name"]; ok && n != nil {
-		return fmt.Sprintf("%v", n)
-	}
-	if n, ok := event["name"]; ok && n != nil {
-		return fmt.Sprintf("%v", n)
-	}
-
-	// Check nested protobuf fields
-	protoKey := eventTypeToProtoKey(eventType)
-	if nested, ok := event[protoKey].(map[string]interface{}); ok {
-		if n, ok := nested["name"]; ok && n != nil {
-			return fmt.Sprintf("%v", n)
-		}
-	}
-	return ""
-}
-
-// extractEventID extracts the EventId from a history event.
-func extractEventID(event api.HistoryEvent) int {
-	return extractIntField(event, "EventId", "eventId")
-}
-
-// extractScheduledID extracts the TaskScheduledId/ScheduledId from a completed/failed event.
-func extractScheduledID(event api.HistoryEvent) int {
-	// Check top-level fields
-	id := extractIntField(event, "TaskScheduledId", "taskScheduledId")
-	if id != -1 {
-		return id
-	}
-	id = extractIntField(event, "ScheduledId", "scheduledId")
-	if id != -1 {
-		return id
-	}
-
-	// Check nested protobuf fields for completed/failed events
-	for _, key := range []string{"taskCompleted", "taskFailed",
-		"subOrchestrationInstanceCompleted", "subOrchestrationInstanceFailed"} {
-		if nested, ok := event[key].(map[string]interface{}); ok {
-			nid := extractIntFromMap(nested, "taskScheduledId", "scheduledId")
-			if nid != -1 {
-				return nid
-			}
-		}
-	}
-	return -1
-}
-
-// extractTimerID extracts the TimerId from a TimerFired event.
-func extractTimerID(event api.HistoryEvent) int {
-	id := extractIntField(event, "TimerId", "timerId")
-	if id != -1 {
-		return id
-	}
-	if nested, ok := event["timerFired"].(map[string]interface{}); ok {
-		return extractIntFromMap(nested, "timerId")
-	}
-	return -1
-}
-
-// extractIntField tries to read an integer from a map using the given key names.
-func extractIntField(event api.HistoryEvent, keys ...string) int {
-	return extractIntFromMap(event, keys...)
-}
-
-// extractIntFromMap extracts an integer from a generic map.
-func extractIntFromMap(m map[string]interface{}, keys ...string) int {
-	for _, key := range keys {
-		if v, ok := m[key]; ok && v != nil {
-			switch n := v.(type) {
-			case float64:
-				return int(n)
-			case int:
-				return n
-			case json.Number:
-				if i, err := n.Int64(); err == nil {
-					return int(i)
-				}
-			}
-		}
-	}
-	return -1
-}
-
-// eventTypeToProtoKey converts a PascalCase event type to camelCase protobuf key.
-func eventTypeToProtoKey(eventType string) string {
-	if len(eventType) == 0 {
-		return ""
-	}
-	return strings.ToLower(eventType[:1]) + eventType[1:]
-}
-
-// extractEventTags extracts tags from a history event's nested oneof object.
-// Tags are a map<string, string> serialized as a JSON object inside the oneof.
-func extractEventTags(event api.HistoryEvent, eventType string) string {
-	// Check top-level
-	if t, ok := event["tags"]; ok && t != nil {
-		return formatTags(t)
-	}
-	if t, ok := event["Tags"]; ok && t != nil {
-		return formatTags(t)
-	}
-	// Check nested in oneof
-	protoKey := eventTypeToProtoKey(eventType)
-	if nested, ok := event[protoKey].(map[string]interface{}); ok {
-		if t, ok := nested["tags"]; ok && t != nil {
-			return formatTags(t)
-		}
-	}
-	return ""
-}
-
-// formatTags formats a tags value (map or other) as a compact string.
-func formatTags(v interface{}) string {
-	m, ok := v.(map[string]interface{})
-	if !ok || len(m) == 0 {
-		return ""
-	}
-	parts := make([]string, 0, len(m))
-	for k, val := range m {
-		parts = append(parts, fmt.Sprintf("%s=%v", k, val))
-	}
-	sort.Strings(parts)
-	return strings.Join(parts, ", ")
-}
-
 // showHistoryEventDetail shows a popup with the full JSON of a history event.
 func (v *OrchestrationDetailView) showHistoryEventDetail(row int) {
 	if v.events == nil {
@@ -1004,8 +822,9 @@ func (v *OrchestrationDetailView) showHistoryEventDetail(row int) {
 	}
 	// Map display row back to the event, skipping Unknown types
 	idx := 0
-	for _, event := range v.events {
-		eventType := detectEventType(event)
+	for i := range v.events {
+		event := &v.events[i]
+		eventType := event.Type()
 		if eventType == "Unknown" {
 			continue
 		}

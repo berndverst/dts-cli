@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -54,7 +55,7 @@ func (c *Client) GetOrchestrationHistory(ctx context.Context, instanceID, execut
 	var wrapper struct {
 		History []HistoryEvent `json:"history"`
 	}
-	if err := decodeJSON(resp, &wrapper); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
 		return nil, fmt.Errorf("decoding history: %w", err)
 	}
 	if wrapper.History != nil {
@@ -248,59 +249,7 @@ func readBody(resp *http.Response) (string, int, error) {
 }
 
 func readAll(resp *http.Response) ([]byte, error) {
-	data := make([]byte, 0, 1024)
-	buf := make([]byte, 512)
-	for {
-		n, err := resp.Body.Read(buf)
-		if n > 0 {
-			data = append(data, buf[:n]...)
-		}
-		if err != nil {
-			break
-		}
-	}
-	return data, nil
-}
-
-func decodeJSON(resp *http.Response, v interface{}) error {
-	data, err := readAll(resp)
-	if err != nil {
-		return err
-	}
-
-	// Try direct decode
-	if err := jsonUnmarshal(data, v); err != nil {
-		return fmt.Errorf("json decode: %w (body: %s)", err, truncateStr(string(data), 200))
-	}
-	return nil
-}
-
-func jsonUnmarshal(data []byte, v interface{}) error {
-	// use standard json.Unmarshal
-	return unmarshalJSON(data, v)
-}
-
-// unmarshalJSON is a simple wrapper using encoding/json.
-func unmarshalJSON(data []byte, v interface{}) error {
-	return jsonDecode(data, v)
-}
-
-func jsonDecode(data []byte, v interface{}) error {
-	// Direct implementation using encoding/json
-	dec := jsonNewDecoder(data)
-	return dec.Decode(v)
-}
-
-func jsonNewDecoder(data []byte) *jsonDecWrapper {
-	return &jsonDecWrapper{data: data}
-}
-
-type jsonDecWrapper struct {
-	data []byte
-}
-
-func (d *jsonDecWrapper) Decode(v interface{}) error {
-	return json.Unmarshal(d.data, v)
+	return io.ReadAll(resp.Body)
 }
 
 func truncateStr(s string, max int) string {

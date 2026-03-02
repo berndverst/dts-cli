@@ -33,7 +33,6 @@ func NewSchedulesView(a *app.App) *SchedulesView {
 		table: components.NewResourceTable([]string{"Schedule ID", "Orchestration", "Status", "Interval", "Next Run", "Last Run", "Created"}),
 		info:  tview.NewTextView().SetDynamicColors(true),
 	}
-
 	v.table.SetSelectHandler(func(row int) {
 		if row < len(v.data) {
 			s := v.data[row]
@@ -72,7 +71,7 @@ func NewSchedulesView(a *app.App) *SchedulesView {
 	return v
 }
 
-func (v *SchedulesView) Name() string              { return "schedules" }
+func (v *SchedulesView) Name() string               { return "schedules" }
 func (v *SchedulesView) Primitive() tview.Primitive { return v.flex }
 func (v *SchedulesView) Crumbs() []string {
 	ctx := v.app.Config.CurrentContext
@@ -93,6 +92,11 @@ func (v *SchedulesView) Init(ctx context.Context) {
 	if v.app.Client == nil {
 		return
 	}
+
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.info.SetText(" [gray]Loading schedules...[-]")
+	})
 
 	result, err := v.app.Client.ListSchedules(ctx, v.currentToken)
 	if err != nil {
@@ -244,9 +248,9 @@ func (v *SchedulesView) createSchedule() {
 
 		go func() {
 			req := &api.CreateScheduleRequest{
-				ScheduleID:        scheduleID,
-				OrchestrationName: orchName,
-				Interval:          values["Interval (e.g. PT1H)"],
+				ScheduleID:         scheduleID,
+				OrchestrationName:  orchName,
+				Interval:           values["Interval (e.g. PT1H)"],
 				OrchestrationInput: values["Input (JSON)"],
 			}
 			err := v.app.Client.CreateSchedule(context.Background(), req)

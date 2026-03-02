@@ -26,7 +26,6 @@ func NewWorkersView(a *app.App) *WorkersView {
 		table: components.NewResourceTable([]string{"Worker ID", "Orchestrations", "Activities", "Entities", "Saturation"}),
 		info:  tview.NewTextView().SetDynamicColors(true),
 	}
-
 	v.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(v.info, 1, 0, false).
 		AddItem(v.table, 0, 1, true)
@@ -34,7 +33,7 @@ func NewWorkersView(a *app.App) *WorkersView {
 	return v
 }
 
-func (v *WorkersView) Name() string              { return "workers" }
+func (v *WorkersView) Name() string               { return "workers" }
 func (v *WorkersView) Primitive() tview.Primitive { return v.flex }
 func (v *WorkersView) Crumbs() []string {
 	ctx := v.app.Config.CurrentContext
@@ -50,6 +49,11 @@ func (v *WorkersView) Init(ctx context.Context) {
 	if v.app.Client == nil {
 		return
 	}
+
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.info.SetText(" [gray]Loading workers...[-]")
+	})
 
 	result, err := v.app.Client.ListWorkers(ctx)
 	if err != nil {

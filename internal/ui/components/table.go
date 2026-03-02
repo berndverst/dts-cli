@@ -31,6 +31,11 @@ func NewResourceTable(headers []string) *ResourceTable {
 	t.SetFixed(1, 0) // Fix header row
 	t.SetSeparator(' ')
 
+	// Only evaluate visible rows for column width computation.
+	// Without this, tview scans ALL rows on every Draw(), which is expensive
+	// for tables with 100+ rows and causes sluggish cursor navigation.
+	t.SetEvaluateAllRows(false)
+
 	// Set header row
 	for col, header := range headers {
 		cell := tview.NewTableCell(" " + header + " ").

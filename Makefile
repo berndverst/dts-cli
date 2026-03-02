@@ -1,4 +1,4 @@
-BINARY    = dts-cli
+BINARY    = dts
 
 # Git version info (Windows cmd.exe compatible)
 ifeq ($(OS),Windows_NT)

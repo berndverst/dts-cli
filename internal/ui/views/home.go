@@ -27,7 +27,6 @@ func NewHomeView(a *app.App) *HomeView {
 		app:   a,
 		table: components.NewResourceTable([]string{"Name", "URL", "Task Hub", "Scheduler", "Description"}),
 	}
-
 	v.table.SetSelectHandler(func(row int) {
 		v.selectContext(row)
 	})

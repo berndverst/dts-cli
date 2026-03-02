@@ -10,6 +10,7 @@ import (
 	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
 	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
 	"github.com/microsoft/durabletask-scheduler/cli/internal/auth"
+	"github.com/microsoft/durabletask-scheduler/cli/internal/cmd"
 	"github.com/microsoft/durabletask-scheduler/cli/internal/config"
 	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/views"
 )
@@ -20,32 +21,25 @@ var (
 )
 
 func main() {
-	var (
-		flagURL      string
-		flagTaskHub  string
-		flagAuthMode string
-		flagTenantID string
-		flagConfig   string
-		flagNoSplash bool
-	)
+	var flagNoSplash bool
 
 	rootCmd := &cobra.Command{
 		Use:   "dts-cli",
 		Short: "Terminal UI for Durable Task Scheduler",
 		Long: `dts-cli is a k9s-style terminal user interface for managing
-Durable Task Scheduler orchestrations, entities, schedules, workers, and agents.`,
-		Version: fmt.Sprintf("%s (commit %s)", version, commit),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Load config
-			var cfg *config.Config
-			var err error
+Durable Task Scheduler orchestrations, entities, schedules, workers, and agents.
 
-			if flagConfig != "" {
-				// TODO: support custom config path
-				cfg, err = config.Load()
-			} else {
-				cfg, err = config.Load()
-			}
+Use 'dts-cli exec' for non-interactive, JSON-output commands suitable for
+scripts and AI agents.`,
+		Version: fmt.Sprintf("%s (commit %s)", version, commit),
+		RunE: func(c *cobra.Command, args []string) error {
+			flagURL, _ := c.Flags().GetString("url")
+			flagTaskHub, _ := c.Flags().GetString("taskhub")
+			flagAuthMode, _ := c.Flags().GetString("auth-mode")
+			flagTenantID, _ := c.Flags().GetString("tenant-id")
+
+			// Load config
+			cfg, err := config.Load()
 			if err != nil {
 				cfg = config.DefaultConfig()
 			}
@@ -108,16 +102,31 @@ Durable Task Scheduler orchestrations, entities, schedules, workers, and agents.
 			}
 
 			// Run the TUI
-			return a.Run()
+			err = a.Run()
+
+			// Reset terminal state after tview exits.
+			// tview/tcell don't always fully restore the terminal on Windows,
+			// which leaves formatting (colors, cursor, line wrapping) broken.
+			fmt.Print("\033[?25h") // show cursor
+			fmt.Print("\033[0m")   // reset attributes
+			fmt.Print("\033c")     // full terminal reset (RIS)
+
+			return err
 		},
 	}
 
-	rootCmd.Flags().StringVar(&flagURL, "url", "", "DTS endpoint URL (overrides current context)")
-	rootCmd.Flags().StringVar(&flagTaskHub, "taskhub", "", "Task hub name (overrides current context)")
-	rootCmd.Flags().StringVar(&flagAuthMode, "auth-mode", "", "Authentication mode: default, browser, cli, device")
-	rootCmd.Flags().StringVar(&flagTenantID, "tenant-id", "", "Azure AD tenant ID")
-	rootCmd.Flags().StringVar(&flagConfig, "config", "", "Path to config file")
+	// Global persistent flags — shared by TUI and all exec subcommands
+	rootCmd.PersistentFlags().String("url", "", "DTS endpoint URL (overrides current context)")
+	rootCmd.PersistentFlags().String("taskhub", "", "Task hub name (overrides current context)")
+	rootCmd.PersistentFlags().String("auth-mode", "", "Authentication mode: default, browser, cli, device, none")
+	rootCmd.PersistentFlags().String("tenant-id", "", "Azure AD tenant ID")
+	rootCmd.PersistentFlags().String("config", "", "Path to config file")
+
+	// TUI-only local flags
 	rootCmd.Flags().BoolVar(&flagNoSplash, "no-splash", false, "Skip the splash screen")
+
+	// Register the exec command family for non-interactive use
+	rootCmd.AddCommand(cmd.NewExecCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

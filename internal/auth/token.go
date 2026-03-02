@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -18,7 +19,9 @@ const dtsScope = "https://durabletask.io/.default"
 type TokenProvider struct {
 	cred     azcore.TokenCredential
 	tenantID string
-	mu       sync.Mutex
+	mu       sync.RWMutex
+	cached   string
+	expiry   time.Time
 }
 
 // NewTokenProvider creates a token provider using the specified auth mode.
@@ -68,10 +71,25 @@ func NewTokenProvider(mode string, tenantID string) (*TokenProvider, error) {
 }
 
 // GetToken acquires a bearer token for the DTS resource.
-// azidentity handles caching internally.
+// Tokens are cached locally and only refreshed when close to expiry.
 func (tp *TokenProvider) GetToken(ctx context.Context) (string, error) {
+	// Fast path: read-lock to check cached token
+	tp.mu.RLock()
+	if tp.cached != "" && time.Now().Add(5*time.Minute).Before(tp.expiry) {
+		token := tp.cached
+		tp.mu.RUnlock()
+		return token, nil
+	}
+	tp.mu.RUnlock()
+
+	// Slow path: write-lock to refresh token
 	tp.mu.Lock()
 	defer tp.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if tp.cached != "" && time.Now().Add(5*time.Minute).Before(tp.expiry) {
+		return tp.cached, nil
+	}
 
 	token, err := tp.cred.GetToken(ctx, policy.TokenRequestOptions{
 		Scopes: []string{dtsScope},
@@ -79,5 +97,7 @@ func (tp *TokenProvider) GetToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("acquiring token: %w", err)
 	}
+	tp.cached = token.Token
+	tp.expiry = token.ExpiresOn
 	return token.Token, nil
 }

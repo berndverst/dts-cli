@@ -30,7 +30,6 @@ func NewAgentsView(a *app.App) *AgentsView {
 		table: components.NewResourceTable([]string{"Agent Name", "Session ID", "Last Modified"}),
 		info:  tview.NewTextView().SetDynamicColors(true),
 	}
-
 	v.table.SetSelectHandler(func(row int) {
 		if row < len(v.data) {
 			agent := v.data[row]
@@ -66,7 +65,7 @@ func NewAgentsView(a *app.App) *AgentsView {
 	return v
 }
 
-func (v *AgentsView) Name() string              { return "agents" }
+func (v *AgentsView) Name() string               { return "agents" }
 func (v *AgentsView) Primitive() tview.Primitive { return v.flex }
 func (v *AgentsView) Crumbs() []string {
 	ctx := v.app.Config.CurrentContext
@@ -85,6 +84,11 @@ func (v *AgentsView) Init(ctx context.Context) {
 	if v.app.Client == nil {
 		return
 	}
+
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.info.SetText(" [gray]Loading agent sessions...[-]")
+	})
 
 	result, err := v.app.Client.ListAgentSessions(ctx, v.app.Config.Settings.PageSize, 0)
 	if err != nil {

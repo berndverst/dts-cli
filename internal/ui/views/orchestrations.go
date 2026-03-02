@@ -42,7 +42,6 @@ func NewOrchestrationsView(a *app.App) *OrchestrationsView {
 		sortCol:  api.SortByLastUpdatedAt,
 		sortDir:  api.SortDescending,
 	}
-
 	v.table.SetSelectHandler(func(row int) {
 		if row < len(v.data) {
 			orch := v.data[row]
@@ -176,6 +175,11 @@ func (v *OrchestrationsView) Init(ctx context.Context) {
 	if v.app.Client == nil {
 		return
 	}
+
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.summary.SetText(" [gray]Loading orchestrations...[-]")
+	})
 
 	req := &api.QueryOrchestrationsRequest{
 		Pagination: &api.Pagination{

@@ -1,23 +1,28 @@
 // Package api provides HTTP client types and request/response DTOs for the DTS Backend API.
 package api
 
-import "time"
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+	"time"
+)
 
 // --- Orchestration Models ---
 
 // Orchestration represents an orchestration instance metadata.
 type Orchestration struct {
-	InstanceID            string            `json:"instanceId"`
-	ExecutionID           string            `json:"executionId,omitempty"`
-	Name                  string            `json:"name"`
-	Version               string            `json:"version,omitempty"`
-	CreatedTimestamp       time.Time         `json:"createdTimestamp"`
-	LastUpdatedTimestamp   time.Time         `json:"lastUpdatedTimestamp"`
-	CompletedTimestamp     *time.Time        `json:"completedTimestamp,omitempty"`
-	OrchestrationStatus   string            `json:"orchestrationStatus"`
-	ScheduledStartTimestamp *time.Time       `json:"scheduledStartTimestamp,omitempty"`
-	ParentInstanceID      string            `json:"parentInstanceId,omitempty"`
-	Tags                  map[string]string `json:"tags,omitempty"`
+	InstanceID              string            `json:"instanceId"`
+	ExecutionID             string            `json:"executionId,omitempty"`
+	Name                    string            `json:"name"`
+	Version                 string            `json:"version,omitempty"`
+	CreatedTimestamp        time.Time         `json:"createdTimestamp"`
+	LastUpdatedTimestamp    time.Time         `json:"lastUpdatedTimestamp"`
+	CompletedTimestamp      *time.Time        `json:"completedTimestamp,omitempty"`
+	OrchestrationStatus     string            `json:"orchestrationStatus"`
+	ScheduledStartTimestamp *time.Time        `json:"scheduledStartTimestamp,omitempty"`
+	ParentInstanceID        string            `json:"parentInstanceId,omitempty"`
+	Tags                    map[string]string `json:"tags,omitempty"`
 }
 
 // OrchestrationPayloads contains the input/output/failure data for an orchestration.
@@ -68,15 +73,15 @@ type QueryOrchestrationsRequest struct {
 
 // OrchestrationFilter specifies filters for orchestration queries.
 type OrchestrationFilter struct {
-	OrchestrationID     *StringFilter         `json:"orchestrationId,omitempty"`
-	Name                *StringFilter         `json:"name,omitempty"`
-	Version             *StringFilter         `json:"version,omitempty"`
-	CreatedAt           *DateTimeFilter       `json:"createdAt,omitempty"`
-	LastUpdatedAt       *DateTimeFilter       `json:"lastUpdatedAt,omitempty"`
-	StartAt             *DateTimeFilter       `json:"startAt,omitempty"`
-	CompletedAt         *DateTimeFilter       `json:"completedAt,omitempty"`
-	OrchestrationStatus *StatusFilter         `json:"orchestrationStatus,omitempty"`
-	Tags                *StringFilter         `json:"tags,omitempty"`
+	OrchestrationID     *StringFilter   `json:"orchestrationId,omitempty"`
+	Name                *StringFilter   `json:"name,omitempty"`
+	Version             *StringFilter   `json:"version,omitempty"`
+	CreatedAt           *DateTimeFilter `json:"createdAt,omitempty"`
+	LastUpdatedAt       *DateTimeFilter `json:"lastUpdatedAt,omitempty"`
+	StartAt             *DateTimeFilter `json:"startAt,omitempty"`
+	CompletedAt         *DateTimeFilter `json:"completedAt,omitempty"`
+	OrchestrationStatus *StatusFilter   `json:"orchestrationStatus,omitempty"`
+	Tags                *StringFilter   `json:"tags,omitempty"`
 }
 
 // StringFilter matches a case-insensitive substring.
@@ -138,18 +143,266 @@ type BatchHistoryEventsRequest struct {
 
 // --- History Event Models ---
 
-// HistoryEvent represents a single orchestration history event.
-// The event is a protobuf union; we use map for flexibility.
-type HistoryEvent map[string]interface{}
+// HistoryEvent represents a single orchestration history event in protobuf-JSON format.
+// Each event contains common metadata (eventId, timestamp) plus exactly one
+// oneof field identifying the event type with its type-specific data.
+type HistoryEvent struct {
+	EventID   int    `json:"eventId"`
+	Timestamp string `json:"timestamp,omitempty"`
+
+	// Protobuf oneof event type fields — exactly one will be non-nil.
+	ExecutionStarted                  *ExecutionStartedEvent    `json:"executionStarted,omitempty"`
+	ExecutionCompleted                *ExecutionCompletedEvent  `json:"executionCompleted,omitempty"`
+	ExecutionFailed                   *ExecutionFailedEvent     `json:"executionFailed,omitempty"`
+	ExecutionTerminated               *ExecutionTerminatedEvent `json:"executionTerminated,omitempty"`
+	TaskScheduled                     *TaskScheduledEvent       `json:"taskScheduled,omitempty"`
+	TaskCompleted                     *TaskCompletedEvent       `json:"taskCompleted,omitempty"`
+	TaskFailed                        *TaskFailedEvent          `json:"taskFailed,omitempty"`
+	SubOrchestrationInstanceCreated   *SubOrchCreatedEvent      `json:"subOrchestrationInstanceCreated,omitempty"`
+	SubOrchestrationInstanceCompleted *SubOrchCompletedEvent    `json:"subOrchestrationInstanceCompleted,omitempty"`
+	SubOrchestrationInstanceFailed    *SubOrchFailedEvent       `json:"subOrchestrationInstanceFailed,omitempty"`
+	TimerCreated                      *TimerCreatedEvent        `json:"timerCreated,omitempty"`
+	TimerFired                        *TimerFiredEvent          `json:"timerFired,omitempty"`
+	EventRaised                       *EventRaisedEvent         `json:"eventRaised,omitempty"`
+	EventSent                         *EventSentEvent           `json:"eventSent,omitempty"`
+	ExecutionSuspended                *ExecutionSuspendedEvent  `json:"executionSuspended,omitempty"`
+	ExecutionResumed                  *ExecutionResumedEvent    `json:"executionResumed,omitempty"`
+}
+
+// Type returns the event type name (e.g., "ExecutionStarted", "TaskScheduled").
+func (e *HistoryEvent) Type() string {
+	switch {
+	case e.ExecutionStarted != nil:
+		return "ExecutionStarted"
+	case e.ExecutionCompleted != nil:
+		return "ExecutionCompleted"
+	case e.ExecutionFailed != nil:
+		return "ExecutionFailed"
+	case e.ExecutionTerminated != nil:
+		return "ExecutionTerminated"
+	case e.TaskScheduled != nil:
+		return "TaskScheduled"
+	case e.TaskCompleted != nil:
+		return "TaskCompleted"
+	case e.TaskFailed != nil:
+		return "TaskFailed"
+	case e.SubOrchestrationInstanceCreated != nil:
+		return "SubOrchestrationInstanceCreated"
+	case e.SubOrchestrationInstanceCompleted != nil:
+		return "SubOrchestrationInstanceCompleted"
+	case e.SubOrchestrationInstanceFailed != nil:
+		return "SubOrchestrationInstanceFailed"
+	case e.TimerCreated != nil:
+		return "TimerCreated"
+	case e.TimerFired != nil:
+		return "TimerFired"
+	case e.EventRaised != nil:
+		return "EventRaised"
+	case e.EventSent != nil:
+		return "EventSent"
+	case e.ExecutionSuspended != nil:
+		return "ExecutionSuspended"
+	case e.ExecutionResumed != nil:
+		return "ExecutionResumed"
+	default:
+		return "Unknown"
+	}
+}
+
+// ParseTimestamp parses the event timestamp.
+func (e *HistoryEvent) ParseTimestamp() time.Time {
+	if e.Timestamp == "" {
+		return time.Time{}
+	}
+	if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
+// EventName returns the name associated with this event (e.g., activity/orchestration name).
+func (e *HistoryEvent) EventName() string {
+	switch {
+	case e.ExecutionStarted != nil:
+		return e.ExecutionStarted.Name
+	case e.TaskScheduled != nil:
+		return e.TaskScheduled.Name
+	case e.SubOrchestrationInstanceCreated != nil:
+		return e.SubOrchestrationInstanceCreated.Name
+	case e.EventRaised != nil:
+		return e.EventRaised.Name
+	case e.EventSent != nil:
+		return e.EventSent.Name
+	default:
+		return ""
+	}
+}
+
+// ScheduledID returns the TaskScheduledId for completion/failure events, or -1.
+func (e *HistoryEvent) ScheduledID() int {
+	switch {
+	case e.TaskCompleted != nil:
+		return e.TaskCompleted.TaskScheduledID
+	case e.TaskFailed != nil:
+		return e.TaskFailed.TaskScheduledID
+	case e.SubOrchestrationInstanceCompleted != nil:
+		return e.SubOrchestrationInstanceCompleted.TaskScheduledID
+	case e.SubOrchestrationInstanceFailed != nil:
+		return e.SubOrchestrationInstanceFailed.TaskScheduledID
+	default:
+		return -1
+	}
+}
+
+// FiredTimerID returns the TimerId from a TimerFired event, or -1.
+func (e *HistoryEvent) FiredTimerID() int {
+	if e.TimerFired != nil {
+		return e.TimerFired.TimerID
+	}
+	return -1
+}
+
+// FormatTags returns a formatted string of event tags, or "".
+func (e *HistoryEvent) FormatTags() string {
+	var tags map[string]string
+	switch {
+	case e.ExecutionStarted != nil:
+		tags = e.ExecutionStarted.Tags
+	case e.TaskScheduled != nil:
+		tags = e.TaskScheduled.Tags
+	case e.SubOrchestrationInstanceCreated != nil:
+		tags = e.SubOrchestrationInstanceCreated.Tags
+	}
+	if len(tags) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(tags))
+	for k, v := range tags {
+		parts = append(parts, k+"="+v)
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ", ")
+}
+
+// --- History Event Sub-Types ---
+
+// ExecutionStartedEvent contains data for an ExecutionStarted history event.
+type ExecutionStartedEvent struct {
+	Name                    string                 `json:"name,omitempty"`
+	Version                 string                 `json:"version,omitempty"`
+	Input                   json.RawMessage        `json:"input,omitempty"`
+	Tags                    map[string]string      `json:"tags,omitempty"`
+	OrchestrationInstance   *OrchestrationInstance `json:"orchestrationInstance,omitempty"`
+	ParentInstance          *OrchestrationInstance `json:"parentInstance,omitempty"`
+	ScheduledStartTimestamp string                 `json:"scheduledStartTimestamp,omitempty"`
+}
+
+// OrchestrationInstance identifies an orchestration instance.
+type OrchestrationInstance struct {
+	InstanceID  string `json:"instanceId,omitempty"`
+	ExecutionID string `json:"executionId,omitempty"`
+}
+
+// ExecutionCompletedEvent contains data for an ExecutionCompleted history event.
+type ExecutionCompletedEvent struct {
+	OrchestrationStatus string          `json:"orchestrationStatus,omitempty"`
+	Result              json.RawMessage `json:"result,omitempty"`
+}
+
+// ExecutionFailedEvent contains data for an ExecutionFailed history event.
+type ExecutionFailedEvent struct {
+	FailureDetails *FailureDetails `json:"failureDetails,omitempty"`
+}
+
+// ExecutionTerminatedEvent contains data for an ExecutionTerminated history event.
+type ExecutionTerminatedEvent struct {
+	Input  json.RawMessage `json:"input,omitempty"`
+	Reason string          `json:"reason,omitempty"`
+}
+
+// TaskScheduledEvent contains data for a TaskScheduled history event.
+type TaskScheduledEvent struct {
+	Name    string            `json:"name,omitempty"`
+	Version string            `json:"version,omitempty"`
+	Input   json.RawMessage   `json:"input,omitempty"`
+	Tags    map[string]string `json:"tags,omitempty"`
+}
+
+// TaskCompletedEvent contains data for a TaskCompleted history event.
+type TaskCompletedEvent struct {
+	TaskScheduledID int             `json:"taskScheduledId"`
+	Result          json.RawMessage `json:"result,omitempty"`
+}
+
+// TaskFailedEvent contains data for a TaskFailed history event.
+type TaskFailedEvent struct {
+	TaskScheduledID int             `json:"taskScheduledId"`
+	FailureDetails  *FailureDetails `json:"failureDetails,omitempty"`
+}
+
+// SubOrchCreatedEvent contains data for a SubOrchestrationInstanceCreated history event.
+type SubOrchCreatedEvent struct {
+	Name       string            `json:"name,omitempty"`
+	Version    string            `json:"version,omitempty"`
+	Input      json.RawMessage   `json:"input,omitempty"`
+	InstanceID string            `json:"instanceId,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
+}
+
+// SubOrchCompletedEvent contains data for a SubOrchestrationInstanceCompleted history event.
+type SubOrchCompletedEvent struct {
+	TaskScheduledID int             `json:"taskScheduledId"`
+	Result          json.RawMessage `json:"result,omitempty"`
+}
+
+// SubOrchFailedEvent contains data for a SubOrchestrationInstanceFailed history event.
+type SubOrchFailedEvent struct {
+	TaskScheduledID int             `json:"taskScheduledId"`
+	FailureDetails  *FailureDetails `json:"failureDetails,omitempty"`
+}
+
+// TimerCreatedEvent contains data for a TimerCreated history event.
+type TimerCreatedEvent struct {
+	FireAt string `json:"fireAt,omitempty"`
+}
+
+// TimerFiredEvent contains data for a TimerFired history event.
+type TimerFiredEvent struct {
+	TimerID int    `json:"timerId"`
+	FireAt  string `json:"fireAt,omitempty"`
+}
+
+// EventRaisedEvent contains data for an EventRaised history event.
+type EventRaisedEvent struct {
+	Name  string          `json:"name,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
+}
+
+// EventSentEvent contains data for an EventSent history event.
+type EventSentEvent struct {
+	Name       string          `json:"name,omitempty"`
+	InstanceID string          `json:"instanceId,omitempty"`
+	Input      json.RawMessage `json:"input,omitempty"`
+}
+
+// ExecutionSuspendedEvent contains data for an ExecutionSuspended history event.
+type ExecutionSuspendedEvent struct {
+	Reason string `json:"reason,omitempty"`
+}
+
+// ExecutionResumedEvent contains data for an ExecutionResumed history event.
+type ExecutionResumedEvent struct {
+	Reason string `json:"reason,omitempty"`
+}
 
 // --- Entity Models ---
 
 // Entity represents an entity instance.
 type Entity struct {
-	InstanceID       string     `json:"instanceId"`
-	LastModifiedTime time.Time  `json:"lastModifiedTime"`
-	BacklogQueueSize int        `json:"backlogQueueSize"`
-	LockedBy         string     `json:"lockedBy,omitempty"`
+	InstanceID       string    `json:"instanceId"`
+	LastModifiedTime time.Time `json:"lastModifiedTime"`
+	BacklogQueueSize int       `json:"backlogQueueSize"`
+	LockedBy         string    `json:"lockedBy,omitempty"`
 }
 
 // EntityName extracts the entity name from the instance ID (format: @entity@Name@Key).
@@ -229,12 +482,12 @@ type EntitiesResult struct {
 // Schedule represents a scheduled orchestration.
 type Schedule struct {
 	ScheduleConfiguration ScheduleConfiguration `json:"ScheduleConfiguration"`
-	Status                int                    `json:"Status"`
-	ExecutionToken        string                 `json:"ExecutionToken,omitempty"`
-	LastRunAt             *time.Time             `json:"LastRunAt,omitempty"`
-	LastRunStatus         *string                `json:"LastRunStatus,omitempty"`
-	ScheduleCreatedAt     *time.Time             `json:"ScheduleCreatedAt,omitempty"`
-	ScheduleLastModified  *time.Time             `json:"ScheduleLastModifiedAt,omitempty"`
+	Status                int                   `json:"Status"`
+	ExecutionToken        string                `json:"ExecutionToken,omitempty"`
+	LastRunAt             *time.Time            `json:"LastRunAt,omitempty"`
+	LastRunStatus         *string               `json:"LastRunStatus,omitempty"`
+	ScheduleCreatedAt     *time.Time            `json:"ScheduleCreatedAt,omitempty"`
+	ScheduleLastModified  *time.Time            `json:"ScheduleLastModifiedAt,omitempty"`
 }
 
 // ScheduleConfiguration holds the schedule parameters.
@@ -271,13 +524,13 @@ type CreateScheduleRequest struct {
 
 // Worker represents a connected worker.
 type Worker struct {
-	WorkerID                 string `json:"workerId"`
-	ActiveOrchestrationsCount int   `json:"activeOrchestrationsCount"`
-	MaxOrchestrationsCount    int   `json:"maxOrchestrationsCount"`
-	ActiveActivitiesCount     int   `json:"activeActivitiesCount"`
-	MaxActivitiesCount        int   `json:"maxActivitiesCount"`
-	ActiveEntitiesCount       int   `json:"activeEntitiesCount"`
-	MaxEntitiesCount          int   `json:"maxEntitiesCount"`
+	WorkerID                  string `json:"workerId"`
+	ActiveOrchestrationsCount int    `json:"activeOrchestrationsCount"`
+	MaxOrchestrationsCount    int    `json:"maxOrchestrationsCount"`
+	ActiveActivitiesCount     int    `json:"activeActivitiesCount"`
+	MaxActivitiesCount        int    `json:"maxActivitiesCount"`
+	ActiveEntitiesCount       int    `json:"activeEntitiesCount"`
+	MaxEntitiesCount          int    `json:"maxEntitiesCount"`
 }
 
 // WorkersResult is the response from listing workers.
@@ -289,10 +542,10 @@ type WorkersResult struct {
 
 // AgentEntity represents an agent session entity.
 type AgentEntity struct {
-	Name             string    `json:"name"`
-	SessionID        string    `json:"sessionId"`
-	EntityID         string    `json:"entityId"`
-	LastModified     time.Time `json:"lastModifiedTime"`
+	Name         string    `json:"name"`
+	SessionID    string    `json:"sessionId"`
+	EntityID     string    `json:"entityId"`
+	LastModified time.Time `json:"lastModifiedTime"`
 }
 
 // AgentState represents the durable state of an agent session.
@@ -312,10 +565,10 @@ type AgentRequest struct {
 
 // AgentMessage is a single message in the agent conversation.
 type AgentMessage struct {
-	Role         string              `json:"role"`
-	Content      string              `json:"content,omitempty"`
-	FunctionCall *AgentFunctionCall  `json:"functionCall,omitempty"`
-	Timestamp    *time.Time          `json:"timestamp,omitempty"`
+	Role         string             `json:"role"`
+	Content      string             `json:"content,omitempty"`
+	FunctionCall *AgentFunctionCall `json:"functionCall,omitempty"`
+	Timestamp    *time.Time         `json:"timestamp,omitempty"`
 }
 
 // AgentFunctionCall represents a function/tool call in the agent conversation.

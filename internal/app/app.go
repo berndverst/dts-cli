@@ -159,7 +159,20 @@ func (a *App) ShowSplash(onDone func()) {
 }
 
 // Run starts the TUI application.
+// It installs a navigation-coalescing screen wrapper that prevents momentum
+// scrolling by ensuring tview sees at most one nav key event per draw frame.
 func (a *App) Run() error {
+	// Wrap the terminal screen to coalesce rapid navigation key events.
+	// This must happen before tview.Run() so tview uses our wrapper.
+	realScreen, err := tcell.NewScreen()
+	if err != nil {
+		return err
+	}
+	wrapper := newNavCoalescingScreen(realScreen)
+	if err := wrapper.Init(); err != nil {
+		return err
+	}
+	a.tviewApp.SetScreen(wrapper)
 	return a.tviewApp.Run()
 }
 
@@ -424,29 +437,38 @@ func (a *App) startAutoRefresh() {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.refreshCancel = cancel
 
-	// 1-second countdown ticker
-	countdownCtx, countdownCancel := context.WithCancel(context.Background())
-	a.countdownCancel = countdownCancel
-	remaining := interval
-
+	// Use a single ticker that fires at the refresh interval instead of
+	// ticking every second. This eliminates per-second full-screen redraws
+	// that made the UI feel sluggish.
 	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+		// Update countdown display every 5 seconds (not every 1 second)
+		// to reduce unnecessary redraws while still showing progress.
+		countdownTicker := time.NewTicker(5 * time.Second)
+		refreshTimer := time.NewTimer(time.Duration(interval) * time.Second)
+		defer countdownTicker.Stop()
+		defer refreshTimer.Stop()
+
+		remaining := interval
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-countdownCtx.Done():
-				return
-			case <-ticker.C:
-				remaining--
-				if remaining <= 0 {
-					// Time to refresh
-					view := a.CurrentView()
-					if view != nil {
-						view.Init(context.Background())
-					}
-					remaining = interval
+			case <-refreshTimer.C:
+				// Time to refresh data
+				view := a.CurrentView()
+				if view != nil {
+					view.Init(context.Background())
+				}
+				remaining = interval
+				refreshTimer.Reset(time.Duration(interval) * time.Second)
+				a.tviewApp.QueueUpdateDraw(func() {
+					a.statusBar.SetCountdown(remaining)
+				})
+			case <-countdownTicker.C:
+				remaining -= 5
+				if remaining < 0 {
+					remaining = 0
 				}
 				a.tviewApp.QueueUpdateDraw(func() {
 					a.statusBar.SetCountdown(remaining)

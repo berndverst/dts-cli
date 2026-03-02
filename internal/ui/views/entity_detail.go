@@ -52,7 +52,7 @@ func NewEntityDetailView(a *app.App, entityID string) *EntityDetailView {
 	return v
 }
 
-func (v *EntityDetailView) Name() string              { return "entity-detail" }
+func (v *EntityDetailView) Name() string               { return "entity-detail" }
 func (v *EntityDetailView) Primitive() tview.Primitive { return v.flex }
 func (v *EntityDetailView) Crumbs() []string {
 	ctxName := v.app.Config.CurrentContext
@@ -72,20 +72,48 @@ func (v *EntityDetailView) Init(ctx context.Context) {
 		return
 	}
 
-	entity, err := v.app.Client.GetEntity(ctx, v.entityID)
-	if err != nil {
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.header.SetText(" [gray]Loading entity details...[-]")
+	})
+
+	// Fetch entity metadata and state in parallel
+	type entityResult struct {
+		entity *api.Entity
+		err    error
+	}
+	type stateResult struct {
+		state string
+		err   error
+	}
+
+	entityCh := make(chan entityResult, 1)
+	stateCh := make(chan stateResult, 1)
+
+	go func() {
+		entity, err := v.app.Client.GetEntity(ctx, v.entityID)
+		entityCh <- entityResult{entity, err}
+	}()
+
+	go func() {
+		state, err := v.app.Client.GetEntityState(ctx, v.entityID)
+		stateCh <- stateResult{state, err}
+	}()
+
+	er := <-entityCh
+	sr := <-stateCh
+
+	if er.err != nil {
 		v.app.QueueUpdateDraw(func() {
-			v.app.FlashError("Load failed: " + err.Error())
+			v.app.FlashError("Load failed: " + er.err.Error())
 		})
 		return
 	}
-	v.entity = entity
-
-	state, _ := v.app.Client.GetEntityState(ctx, v.entityID)
+	v.entity = er.entity
 
 	v.app.QueueUpdateDraw(func() {
 		v.renderHeader()
-		v.renderState(state)
+		v.renderState(sr.state)
 	})
 }
 

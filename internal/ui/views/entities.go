@@ -32,7 +32,6 @@ func NewEntitiesView(a *app.App) *EntitiesView {
 		table: components.NewResourceTable([]string{"Entity Name", "Entity Key", "Last Modified", "Locked By"}),
 		info:  tview.NewTextView().SetDynamicColors(true),
 	}
-
 	v.table.SetSelectHandler(func(row int) {
 		if row < len(v.data) {
 			e := v.data[row]
@@ -74,7 +73,7 @@ func NewEntitiesView(a *app.App) *EntitiesView {
 	return v
 }
 
-func (v *EntitiesView) Name() string              { return "entities" }
+func (v *EntitiesView) Name() string               { return "entities" }
 func (v *EntitiesView) Primitive() tview.Primitive { return v.flex }
 func (v *EntitiesView) Crumbs() []string {
 	ctx := v.app.Config.CurrentContext
@@ -93,6 +92,11 @@ func (v *EntitiesView) Init(ctx context.Context) {
 	if v.app.Client == nil {
 		return
 	}
+
+	// Show loading indicator immediately so the UI feels responsive
+	v.app.QueueUpdateDraw(func() {
+		v.info.SetText(" [gray]Loading entities...[-]")
+	})
 
 	req := &api.QueryEntitiesRequest{
 		Pagination: &api.Pagination{
