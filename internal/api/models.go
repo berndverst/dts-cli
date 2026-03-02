@@ -3,6 +3,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -147,7 +148,7 @@ type BatchHistoryEventsRequest struct {
 // Each event contains common metadata (eventId, timestamp) plus exactly one
 // oneof field identifying the event type with its type-specific data.
 type HistoryEvent struct {
-	EventID   int    `json:"eventId"`
+	EventID   *int   `json:"eventId,omitempty"`
 	Timestamp string `json:"timestamp,omitempty"`
 
 	// Protobuf oneof event type fields — exactly one will be non-nil.
@@ -251,6 +252,47 @@ func (e *HistoryEvent) ScheduledID() int {
 		return e.SubOrchestrationInstanceFailed.TaskScheduledID
 	default:
 		return -1
+	}
+}
+
+// EventIDValue returns the event ID as an int, or -1 if nil.
+func (e *HistoryEvent) EventIDValue() int {
+	if e.EventID != nil {
+		return *e.EventID
+	}
+	return -1
+}
+
+// EventIDString returns the event ID formatted for display.
+// Returns "" for nil (omitted/null) event IDs instead of "-1".
+func (e *HistoryEvent) EventIDString() string {
+	if e.EventID != nil {
+		return fmt.Sprintf("%d", *e.EventID)
+	}
+	return ""
+}
+
+// DisplayID returns the most meaningful identifier for display in the history table.
+// For completion/failure events it returns the nested taskScheduledId or timerId
+// that correlates the event back to its "scheduled" counterpart, matching the
+// behaviour of the DTS web dashboard.
+func (e *HistoryEvent) DisplayID() string {
+	switch {
+	// Completion/failure events → show the nested scheduledId they reference
+	case e.TaskCompleted != nil:
+		return fmt.Sprintf("%d", e.TaskCompleted.TaskScheduledID)
+	case e.TaskFailed != nil:
+		return fmt.Sprintf("%d", e.TaskFailed.TaskScheduledID)
+	case e.SubOrchestrationInstanceCompleted != nil:
+		return fmt.Sprintf("%d", e.SubOrchestrationInstanceCompleted.TaskScheduledID)
+	case e.SubOrchestrationInstanceFailed != nil:
+		return fmt.Sprintf("%d", e.SubOrchestrationInstanceFailed.TaskScheduledID)
+	// TimerFired → show the timerId it references
+	case e.TimerFired != nil:
+		return fmt.Sprintf("%d", e.TimerFired.TimerID)
+	// Scheduled/created events and others → use the top-level eventId
+	default:
+		return e.EventIDString()
 	}
 }
 

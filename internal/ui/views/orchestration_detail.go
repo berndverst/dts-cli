@@ -349,7 +349,7 @@ func (v *OrchestrationDetailView) renderHistory() {
 			ts = util.FormatTimestamp(timestamp, local)
 		}
 		name := event.EventName()
-		eventID := fmt.Sprintf("%d", event.EventID)
+		eventID := event.DisplayID()
 		tags := event.FormatTags()
 
 		v.history.SetDataRow(row,
@@ -703,7 +703,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "TaskScheduled":
-			id := event.EventID
+			id := event.EventIDValue()
 			name := event.EventName()
 			if name == "" {
 				name = "Activity"
@@ -733,7 +733,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "SubOrchestrationInstanceCreated":
-			id := event.EventID
+			id := event.EventIDValue()
 			name := event.EventName()
 			if name == "" {
 				name = "SubOrchestration"
@@ -763,7 +763,7 @@ func (v *OrchestrationDetailView) parseTimelineEntries() []timelineEntry {
 			}
 
 		case "TimerCreated":
-			id := event.EventID
+			id := event.EventIDValue()
 			pending[id] = &pendingEvent{name: "Timer", category: "Timer", startTime: timestamp}
 
 		case "TimerFired":

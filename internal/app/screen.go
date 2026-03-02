@@ -74,6 +74,32 @@ func isNavKey(key tcell.Key) bool {
 	return false
 }
 
+// isNavEvent returns true for navigation events, including vim-style j/k rune
+// keys that tview tables and lists interpret as down/up movement. Coalescing
+// these prevents momentum scrolling when holding j or k.
+func isNavEvent(ev *tcell.EventKey) bool {
+	if isNavKey(ev.Key()) {
+		return true
+	}
+	if ev.Key() == tcell.KeyRune {
+		switch ev.Rune() {
+		case 'j', 'k', 'g', 'G':
+			return true
+		}
+	}
+	return false
+}
+
+// navDirection returns a comparable value representing the navigation
+// direction of a navigation event. Events with the same direction are
+// coalesced; direction changes flush the current batch.
+func navDirection(ev *tcell.EventKey) interface{} {
+	if ev.Key() == tcell.KeyRune {
+		return ev.Rune() // j, k, g, G each form their own direction
+	}
+	return ev.Key()
+}
+
 // PollEvent returns the next event, coalescing consecutive same-direction
 // navigation keys into a single event. Non-nav events pass through unchanged.
 func (s *navCoalescingScreen) PollEvent() tcell.Event {
@@ -90,7 +116,7 @@ func (s *navCoalescingScreen) PollEvent() tcell.Event {
 	}
 
 	keyEv, ok := ev.(*tcell.EventKey)
-	if !ok || !isNavKey(keyEv.Key()) {
+	if !ok || !isNavEvent(keyEv) {
 		return ev // non-key or non-nav: pass through immediately
 	}
 
@@ -102,7 +128,7 @@ func (s *navCoalescingScreen) PollEvent() tcell.Event {
 // If a different-direction nav event is encountered, it is saved in s.pending.
 func (s *navCoalescingScreen) coalesceFrom(initial *tcell.EventKey) tcell.Event {
 	last := initial
-	dir := initial.Key()
+	dir := navDirection(initial)
 
 	timer := time.NewTimer(coalesceWindow)
 	defer timer.Stop()
@@ -114,7 +140,7 @@ func (s *navCoalescingScreen) coalesceFrom(initial *tcell.EventKey) tcell.Event 
 				return last
 			}
 			nextKey, ok := next.(*tcell.EventKey)
-			if !ok || !isNavKey(nextKey.Key()) {
+			if !ok || !isNavEvent(nextKey) {
 				// Non-nav event interrupts the batch.
 				// We can't "un-read" it into the channel, so buffer it as
 				// a pending event. However, pending is typed *EventKey for
@@ -124,7 +150,7 @@ func (s *navCoalescingScreen) coalesceFrom(initial *tcell.EventKey) tcell.Event 
 				go func() { s.ch <- next }()
 				return last
 			}
-			if nextKey.Key() != dir {
+			if navDirection(nextKey) != dir {
 				// Direction changed — buffer the new direction, return batch.
 				s.pending = nextKey
 				return last

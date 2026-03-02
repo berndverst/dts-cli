@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -52,6 +53,10 @@ type App struct {
 	refreshCancel   context.CancelFunc
 	refreshTicker   *time.Ticker
 	countdownCancel context.CancelFunc
+
+	// updating guards against concurrent view Init/Draw operations.
+	// Inspired by k9s: prevents auto-refresh and manual refresh from racing.
+	updating int32
 
 	// Callbacks for creating views
 	ViewFactory ViewFactory
@@ -216,13 +221,21 @@ func (a *App) CurrentView() View {
 }
 
 // Refresh re-initializes the current view and resets the auto-refresh countdown.
+// Uses an atomic guard (inspired by k9s) to prevent concurrent refreshes from
+// racing on data fetch + render and piling up redundant Draw() calls.
 func (a *App) Refresh() {
 	view := a.CurrentView()
 	if view != nil {
 		go func() {
+			if !atomic.CompareAndSwapInt32(&a.updating, 0, 1) {
+				return // another refresh is already in-flight
+			}
+			defer atomic.StoreInt32(&a.updating, 0)
 			ctx := context.Background()
 			view.Init(ctx)
-			a.tviewApp.Draw()
+			// QueueUpdateDraw (instead of Draw) lets tview coalesce
+			// multiple pending draws into a single screen update.
+			a.tviewApp.QueueUpdateDraw(func() {})
 		}()
 	}
 	// Restart the countdown timer
@@ -309,11 +322,17 @@ func (a *App) showView(view View) {
 	a.statusBar.SetFilter("")
 	a.tviewApp.SetFocus(view.Primitive())
 
-	// Initialize/refresh data
+	// Initialize/refresh data.
+	// Uses QueueUpdateDraw instead of direct Draw() so tview can coalesce
+	// multiple pending draw requests into fewer screen updates.
 	go func() {
+		if !atomic.CompareAndSwapInt32(&a.updating, 0, 1) {
+			return
+		}
+		defer atomic.StoreInt32(&a.updating, 0)
 		ctx := context.Background()
 		view.Init(ctx)
-		a.tviewApp.Draw()
+		a.tviewApp.QueueUpdateDraw(func() {})
 	}()
 
 	// Setup auto-refresh
@@ -441,9 +460,10 @@ func (a *App) startAutoRefresh() {
 	// ticking every second. This eliminates per-second full-screen redraws
 	// that made the UI feel sluggish.
 	go func() {
-		// Update countdown display every 5 seconds (not every 1 second)
-		// to reduce unnecessary redraws while still showing progress.
-		countdownTicker := time.NewTicker(5 * time.Second)
+		// Tick every second but only update the display at meaningful moments:
+		// every 5 seconds while > 5s remaining, then every second for the
+		// final countdown (5, 4, 3, 2, 1).
+		countdownTicker := time.NewTicker(1 * time.Second)
 		refreshTimer := time.NewTimer(time.Duration(interval) * time.Second)
 		defer countdownTicker.Stop()
 		defer refreshTimer.Stop()
@@ -455,10 +475,13 @@ func (a *App) startAutoRefresh() {
 			case <-ctx.Done():
 				return
 			case <-refreshTimer.C:
-				// Time to refresh data
-				view := a.CurrentView()
-				if view != nil {
-					view.Init(context.Background())
+				// Atomic guard: skip if a manual refresh is already running.
+				if atomic.CompareAndSwapInt32(&a.updating, 0, 1) {
+					view := a.CurrentView()
+					if view != nil {
+						view.Init(context.Background())
+					}
+					atomic.StoreInt32(&a.updating, 0)
 				}
 				remaining = interval
 				refreshTimer.Reset(time.Duration(interval) * time.Second)
@@ -466,13 +489,16 @@ func (a *App) startAutoRefresh() {
 					a.statusBar.SetCountdown(remaining)
 				})
 			case <-countdownTicker.C:
-				remaining -= 5
+				remaining--
 				if remaining < 0 {
 					remaining = 0
 				}
-				a.tviewApp.QueueUpdateDraw(func() {
-					a.statusBar.SetCountdown(remaining)
-				})
+				// Update display every 5s while > 5s, then every second.
+				if remaining <= 5 || remaining%5 == 0 {
+					a.tviewApp.QueueUpdateDraw(func() {
+						a.statusBar.SetCountdown(remaining)
+					})
+				}
 			}
 		}
 	}()
