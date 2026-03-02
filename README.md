@@ -1,4 +1,4 @@
-# dts-cli
+# Durable Task Scheduler (DTS) CLI
 
 A k9s-style terminal UI for [Durable Task Scheduler](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler-overview) (DTS).
 
