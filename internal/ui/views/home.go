@@ -4,6 +4,7 @@ package views
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -16,9 +17,10 @@ import (
 
 // HomeView shows the list of configured DTS endpoints (contexts).
 type HomeView struct {
-	app   *app.App
-	table *components.ResourceTable
-	flex  *tview.Flex
+	app          *app.App
+	table        *components.ResourceTable
+	flex         *tview.Flex
+	contextNames []string // stable sorted slice of context names, kept in sync with table rows
 }
 
 // NewHomeView creates the home/endpoint selector view.
@@ -74,17 +76,26 @@ func (v *HomeView) Init(ctx context.Context) {
 	v.app.QueueUpdateDraw(func() {
 		v.table.ClearData()
 		cfg := v.app.Config
-		row := 0
-		for name, c := range cfg.Contexts {
+
+		// Build a sorted slice of context names so that table row indices
+		// map deterministically to contexts across Init, selectContext and deleteEndpoint.
+		names := make([]string, 0, len(cfg.Contexts))
+		for name := range cfg.Contexts {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		v.contextNames = names
+
+		for row, name := range v.contextNames {
+			c := cfg.Contexts[name]
 			displayName := name
 			if name == cfg.CurrentContext {
 				displayName = "● " + name
 			}
 			v.table.SetDataRow(row, displayName, c.URL, c.TaskHub, c.Scheduler, c.Description)
-			row++
 		}
 
-		if row == 0 {
+		if len(v.contextNames) == 0 {
 			// Show empty state
 			v.table.SetDataRow(0, "(no endpoints configured)", "", "", "", "Press 'n' to add one")
 		}
@@ -92,16 +103,12 @@ func (v *HomeView) Init(ctx context.Context) {
 }
 
 func (v *HomeView) selectContext(row int) {
-	cfg := v.app.Config
-	names := make([]string, 0, len(cfg.Contexts))
-	for name := range cfg.Contexts {
-		names = append(names, name)
-	}
-	if row >= len(names) {
+	if row >= len(v.contextNames) {
 		return
 	}
 
-	name := names[row]
+	name := v.contextNames[row]
+	cfg := v.app.Config
 	cfg.CurrentContext = name
 	_ = cfg.Save()
 
@@ -151,17 +158,13 @@ func (v *HomeView) deleteEndpoint() {
 		return
 	}
 
-	cfg := v.app.Config
-	names := make([]string, 0, len(cfg.Contexts))
-	for name := range cfg.Contexts {
-		names = append(names, name)
-	}
 	dataRow := row - 1
-	if dataRow >= len(names) {
+	if dataRow >= len(v.contextNames) {
 		return
 	}
-	name := names[dataRow]
+	name := v.contextNames[dataRow]
 
+	cfg := v.app.Config
 	v.app.ShowConfirm("Delete Endpoint", fmt.Sprintf("Delete endpoint '%s'?", name), func() {
 		cfg.RemoveContext(name)
 		_ = cfg.Save()
