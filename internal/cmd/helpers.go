@@ -12,9 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/auth"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/config"
+	"github.com/Azure/durabletask-cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/auth"
+	"github.com/Azure/durabletask-cli/internal/config"
 )
 
 // initClient creates an authenticated API client from persistent flags and config.

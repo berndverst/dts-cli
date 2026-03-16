@@ -43,7 +43,7 @@ jobs:
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
           go build -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT}" \
-            -o "${{ matrix.artifact }}${EXT}" .
+            -o "${{ matrix.artifact }}${EXT}" ./cmd/dts
 
       - name: Package
         run: |

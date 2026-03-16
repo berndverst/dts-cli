@@ -7,10 +7,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/components"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/util"
+	"github.com/Azure/durabletask-cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/app"
+	"github.com/Azure/durabletask-cli/internal/ui/components"
+	"github.com/Azure/durabletask-cli/internal/util"
 )
 
 // EntityDetailView shows a single entity's state.

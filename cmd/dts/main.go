@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/auth"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/cmd"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/config"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/views"
+	"github.com/Azure/durabletask-cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/app"
+	"github.com/Azure/durabletask-cli/internal/auth"
+	"github.com/Azure/durabletask-cli/internal/cmd"
+	"github.com/Azure/durabletask-cli/internal/config"
+	"github.com/Azure/durabletask-cli/internal/ui/views"
 )
 
 var (

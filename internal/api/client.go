@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/auth"
+	"github.com/Azure/durabletask-cli/internal/auth"
 )
 
 // Client is the DTS Backend API HTTP client.

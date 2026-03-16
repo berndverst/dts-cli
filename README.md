@@ -2,6 +2,7 @@
 
 A k9s-style terminal UI for [Durable Task Scheduler](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler-overview) (DTS).
 
+[![CI](https://github.com/Azure/durabletask-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Azure/durabletask-cli/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)
 
 ## Features
@@ -22,13 +23,13 @@ A k9s-style terminal UI for [Durable Task Scheduler](https://learn.microsoft.com
 ## Install
 
 ```bash
-go install github.com/microsoft/durabletask-scheduler/cli@latest
+go install github.com/Azure/durabletask-cli/cmd/dts@latest
 ```
 
-Or build from source:
+Or install from source (installs to `$GOBIN` if set, otherwise `$GOPATH/bin`):
 
 ```bash
-go build -o dts .
+go install ./cmd/dts
 ```
 
 ## Quick Start

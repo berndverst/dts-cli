@@ -10,9 +10,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/config"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/components"
+	"github.com/Azure/durabletask-cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/config"
+	"github.com/Azure/durabletask-cli/internal/ui/components"
 )
 
 // View represents a navigable view in the application.

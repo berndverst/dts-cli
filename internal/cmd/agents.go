@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/api"
 )
 
 func newAgentsCmd() *cobra.Command {

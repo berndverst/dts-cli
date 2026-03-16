@@ -1,4 +1,4 @@
-module github.com/microsoft/durabletask-scheduler/cli
+module github.com/Azure/durabletask-cli
 
 go 1.26.0
 

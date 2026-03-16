@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	defer os.RemoveAll(tmpDir)
 
 	binaryPath = filepath.Join(tmpDir, "dts")
-	buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/dts")
 	buildCmd.Dir = filepath.Join(repoRoot())
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr

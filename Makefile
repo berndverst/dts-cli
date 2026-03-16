@@ -23,10 +23,10 @@ endif
 .PHONY: build clean test vet fmt install build-linux build-darwin build-windows build-all integration-test
 
 build:
-	go build $(LDFLAGS) -o bin/$(BINARY)$(EXE) .
+	go build $(LDFLAGS) -o bin/$(BINARY)$(EXE) ./cmd/dts
 
 install:
-	go install $(LDFLAGS) .
+	go install $(LDFLAGS) ./cmd/dts
 
 test:
 	go test -v ./...
@@ -58,6 +58,6 @@ build-windows:
 	$(MAKE) GOOS=windows GOARCH=amd64 _cross OUT=bin/$(BINARY)-windows-amd64.exe
 
 _cross:
-	go build $(LDFLAGS) -o $(OUT) .
+	go build $(LDFLAGS) -o $(OUT) ./cmd/dts
 
 build-all: build-linux build-darwin build-windows

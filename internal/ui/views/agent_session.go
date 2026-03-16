@@ -8,9 +8,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/api"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/components"
+	"github.com/Azure/durabletask-cli/internal/api"
+	"github.com/Azure/durabletask-cli/internal/app"
+	"github.com/Azure/durabletask-cli/internal/ui/components"
 )
 
 // AgentSessionView shows an agent session's messages and allows sending prompts.

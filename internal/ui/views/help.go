@@ -5,8 +5,8 @@ import (
 
 	"github.com/rivo/tview"
 
-	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
-	"github.com/microsoft/durabletask-scheduler/cli/internal/ui/components"
+	"github.com/Azure/durabletask-cli/internal/app"
+	"github.com/Azure/durabletask-cli/internal/ui/components"
 )
 
 // HelpView shows available keybindings and commands.

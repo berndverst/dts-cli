@@ -27,7 +27,7 @@ jobs:
         run: go test -v ./...
 
       - name: Build
-        run: go build -o bin/dts .
+        run: go build -o bin/dts ./cmd/dts
 
   integration-test:
     runs-on: ubuntu-latest

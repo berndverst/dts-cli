@@ -1,7 +1,7 @@
 package views
 
 import (
-	"github.com/microsoft/durabletask-scheduler/cli/internal/app"
+	"github.com/Azure/durabletask-cli/internal/app"
 )
 
 // Factory creates views by resource name.
