@@ -149,7 +149,7 @@ func (c *Crumbs) SetCrumbs(items ...string) {
 
 func (c *Crumbs) render() {
 	if len(c.items) == 0 {
-		c.SetText(" [aqua]dts-cli[-]")
+		c.SetText(" [aqua]dts[-]")
 		return
 	}
 	var parts []string

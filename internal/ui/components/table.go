@@ -1,4 +1,4 @@
-// Package components provides reusable TUI widgets for dts-cli.
+// Package components provides reusable TUI widgets for dts.
 package components
 
 import (

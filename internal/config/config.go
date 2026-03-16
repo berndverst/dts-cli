@@ -1,4 +1,4 @@
-// Package config manages dts-cli configuration, including endpoint contexts and user settings.
+// Package config manages dts configuration, including endpoint contexts and user settings.
 package config
 
 import (
@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config is the top-level configuration for dts-cli.
+// Config is the top-level configuration for dts.
 type Config struct {
 	CurrentContext string              `yaml:"currentContext"`
 	Contexts       map[string]*Context `yaml:"contexts"`
@@ -63,17 +63,17 @@ func ConfigDir() string {
 	if runtime.GOOS == "windows" {
 		appData := os.Getenv("APPDATA")
 		if appData != "" {
-			return filepath.Join(appData, "dts-cli")
+			return filepath.Join(appData, "dts")
 		}
 		home, _ := os.UserHomeDir()
-		return filepath.Join(home, ".config", "dts-cli")
+		return filepath.Join(home, ".config", "dts")
 	}
 	xdg := os.Getenv("XDG_CONFIG_HOME")
 	if xdg != "" {
-		return filepath.Join(xdg, "dts-cli")
+		return filepath.Join(xdg, "dts")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "dts-cli")
+	return filepath.Join(home, ".config", "dts")
 }
 
 // ConfigFilePath returns the full path to the config file.

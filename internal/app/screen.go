@@ -1,4 +1,4 @@
-// Package app provides the core TUI application shell for dts-cli.
+// Package app provides the core TUI application shell for dts.
 package app
 
 import (

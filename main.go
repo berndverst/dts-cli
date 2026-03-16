@@ -1,4 +1,4 @@
-// dts-cli is a k9s-style terminal UI for Durable Task Scheduler.
+// dts is a k9s-style terminal UI for Durable Task Scheduler.
 package main
 
 import (
@@ -24,12 +24,12 @@ func main() {
 	var flagNoSplash bool
 
 	rootCmd := &cobra.Command{
-		Use:   "dts-cli",
+		Use:   "dts",
 		Short: "Terminal UI for Durable Task Scheduler",
-		Long: `dts-cli is a k9s-style terminal user interface for managing
+		Long: `dts is a k9s-style terminal user interface for managing
 Durable Task Scheduler orchestrations, entities, schedules, workers, and agents.
 
-Use 'dts-cli exec' for non-interactive, JSON-output commands suitable for
+Use 'dts exec' for non-interactive, JSON-output commands suitable for
 scripts and AI agents.`,
 		Version: fmt.Sprintf("%s (commit %s)", version, commit),
 		RunE: func(c *cobra.Command, args []string) error {

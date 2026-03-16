@@ -379,7 +379,7 @@ func (v *OrchestrationsView) bulkAction(action string, fn func(ids []string)) {
 
 func (v *OrchestrationsView) bulkSuspend(ids []string) {
 	go func() {
-		unsuccessful, err := v.app.Client.BatchSuspend(context.Background(), ids, "Suspended via dts-cli")
+		unsuccessful, err := v.app.Client.BatchSuspend(context.Background(), ids, "Suspended via dts")
 		v.app.QueueUpdateDraw(func() {
 			if err != nil {
 				v.app.FlashError("Suspend failed: " + err.Error())
@@ -396,7 +396,7 @@ func (v *OrchestrationsView) bulkSuspend(ids []string) {
 
 func (v *OrchestrationsView) bulkResume(ids []string) {
 	go func() {
-		unsuccessful, err := v.app.Client.BatchResume(context.Background(), ids, "Resumed via dts-cli")
+		unsuccessful, err := v.app.Client.BatchResume(context.Background(), ids, "Resumed via dts")
 		v.app.QueueUpdateDraw(func() {
 			if err != nil {
 				v.app.FlashError("Resume failed: " + err.Error())
@@ -413,7 +413,7 @@ func (v *OrchestrationsView) bulkResume(ids []string) {
 
 func (v *OrchestrationsView) bulkTerminate(ids []string) {
 	go func() {
-		unsuccessful, err := v.app.Client.BatchTerminate(context.Background(), ids, "Terminated via dts-cli")
+		unsuccessful, err := v.app.Client.BatchTerminate(context.Background(), ids, "Terminated via dts")
 		v.app.QueueUpdateDraw(func() {
 			if err != nil {
 				v.app.FlashError("Terminate failed: " + err.Error())
@@ -436,7 +436,7 @@ func (v *OrchestrationsView) bulkForceTerminate() {
 	}
 	v.app.ShowConfirm("Force Terminate", fmt.Sprintf("Force-terminate %d orchestration(s)? This skips graceful shutdown.", len(ids)), func() {
 		go func() {
-			unsuccessful, err := v.app.Client.ForceTerminate(context.Background(), ids, "Force-terminated via dts-cli")
+			unsuccessful, err := v.app.Client.ForceTerminate(context.Background(), ids, "Force-terminated via dts")
 			v.app.QueueUpdateDraw(func() {
 				if err != nil {
 					v.app.FlashError("Force terminate failed: " + err.Error())

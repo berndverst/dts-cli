@@ -1,4 +1,4 @@
-// Package util provides formatting and string utility functions for the dts-cli.
+// Package util provides formatting and string utility functions for the dts.
 package util
 
 import (

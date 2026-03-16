@@ -1,4 +1,4 @@
-// Package cmd implements non-interactive CLI commands for dts-cli.
+// Package cmd implements non-interactive CLI commands for dts.
 // All commands output JSON to stdout and are suitable for use in scripts and by AI agents.
 package cmd
 
@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -89,4 +92,46 @@ func printStatus(action, id string) {
 		"action": action,
 		"id":     id,
 	})
+}
+
+var iso8601Re = regexp.MustCompile(`^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$`)
+
+// toTimeSpan converts an ISO 8601 duration (e.g. PT1H, PT30M, P1DT2H) to a .NET
+// TimeSpan string (e.g. "01:00:00", "00:30:00", "1.02:00:00"). If the input is
+// already in TimeSpan format (contains ':'), it is returned as-is.
+func toTimeSpan(s string) string {
+	if strings.Contains(s, ":") {
+		return s
+	}
+	s = strings.ToUpper(strings.TrimSpace(s))
+	if !strings.HasPrefix(s, "P") {
+		return s
+	}
+
+	m := iso8601Re.FindStringSubmatch(s)
+	if m == nil {
+		return s
+	}
+
+	// Require at least one duration component
+	if m[1] == "" && m[2] == "" && m[3] == "" && m[4] == "" {
+		return s
+	}
+
+	days, _ := strconv.Atoi(m[1])
+	hours, _ := strconv.Atoi(m[2])
+	minutes, _ := strconv.Atoi(m[3])
+	seconds, _ := strconv.Atoi(m[4])
+
+	// Normalize overflow: PT90M → 01:30:00, PT25H → 1.01:00:00
+	totalSeconds := days*86400 + hours*3600 + minutes*60 + seconds
+	days = totalSeconds / 86400
+	hours = (totalSeconds % 86400) / 3600
+	minutes = (totalSeconds % 3600) / 60
+	seconds = totalSeconds % 60
+
+	if days > 0 {
+		return fmt.Sprintf("%d.%02d:%02d:%02d", days, hours, minutes, seconds)
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }

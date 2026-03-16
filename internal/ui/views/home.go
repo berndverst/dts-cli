@@ -1,4 +1,4 @@
-// Package views provides all TUI views for dts-cli.
+// Package views provides all TUI views for dts.
 package views
 
 import (

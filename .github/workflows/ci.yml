@@ -28,3 +28,40 @@ jobs:
 
       - name: Build
         run: go build -o bin/dts .
+
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      dts-emulator:
+        image: mcr.microsoft.com/dts/dts-emulator:latest
+        ports:
+          - 8080:8080
+          - 8081:8081
+          - 8082:8082
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Wait for emulator
+        run: |
+          echo "Waiting for DTS emulator to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf -H "x-taskhub: default" http://localhost:8081/v1/taskhubs/ping > /dev/null 2>&1; then
+              echo "Emulator is ready"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting..."
+            sleep 2
+          done
+          echo "Emulator did not become ready in time"
+          exit 1
+
+      - name: Integration tests
+        env:
+          DTS_URL: http://localhost:8081
+          DTS_TASKHUB: default
+        run: go test -tags integration -v -count=1 ./test/integration/...

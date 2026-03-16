@@ -35,7 +35,7 @@ func (v *HelpView) Hints() []components.KeyHint {
 
 func (v *HelpView) Init(_ context.Context) {
 	content := `
- [aqua::b]dts-cli — Durable Task Scheduler CLI[-:-:-]
+ [aqua::b]dts — Durable Task Scheduler CLI[-:-:-]
  [gray]A k9s-style terminal UI for managing DTS orchestrations[-]
 
  [white::b]Global Keybindings[-:-:-]

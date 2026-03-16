@@ -92,17 +92,17 @@ func NewOrchestrationDetailView(a *app.App, instanceID, executionID string) *Orc
 		switch event.Rune() {
 		case 's':
 			v.doAction("Suspend", func() error {
-				return v.app.Client.SuspendOrchestration(context.Background(), v.instanceID, "Suspended via dts-cli")
+				return v.app.Client.SuspendOrchestration(context.Background(), v.instanceID, "Suspended via dts")
 			})
 			return nil
 		case 'u':
 			v.doAction("Resume", func() error {
-				return v.app.Client.ResumeOrchestration(context.Background(), v.instanceID, "Resumed via dts-cli")
+				return v.app.Client.ResumeOrchestration(context.Background(), v.instanceID, "Resumed via dts")
 			})
 			return nil
 		case 'k':
 			v.doAction("Terminate", func() error {
-				return v.app.Client.TerminateOrchestration(context.Background(), v.instanceID, "Terminated via dts-cli")
+				return v.app.Client.TerminateOrchestration(context.Background(), v.instanceID, "Terminated via dts")
 			})
 			return nil
 		case 'x':
@@ -110,7 +110,7 @@ func NewOrchestrationDetailView(a *app.App, instanceID, executionID string) *Orc
 			return nil
 		case 'w':
 			v.doAction("Rewind", func() error {
-				return v.app.Client.RewindOrchestration(context.Background(), v.instanceID, "Rewound via dts-cli")
+				return v.app.Client.RewindOrchestration(context.Background(), v.instanceID, "Rewound via dts")
 			})
 			return nil
 		case 'p':
@@ -427,7 +427,7 @@ func (v *OrchestrationDetailView) doRestart() {
 func (v *OrchestrationDetailView) forceTerminate() {
 	v.app.ShowConfirm("Force Terminate", fmt.Sprintf("Force-terminate %s? This skips graceful shutdown.", v.instanceID), func() {
 		go func() {
-			_, err := v.app.Client.ForceTerminate(context.Background(), []string{v.instanceID}, "Force-terminated via dts-cli")
+			_, err := v.app.Client.ForceTerminate(context.Background(), []string{v.instanceID}, "Force-terminated via dts")
 			v.app.QueueUpdateDraw(func() {
 				if err != nil {
 					v.app.FlashError("Force terminate failed: " + err.Error())

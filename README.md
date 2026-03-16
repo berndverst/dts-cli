@@ -7,7 +7,7 @@ A k9s-style terminal UI for [Durable Task Scheduler](https://learn.microsoft.com
 ## Features
 
 - **Interactive TUI dashboard** — k9s-style terminal UI with multi-view navigation
-- **Non-interactive CLI** — `dts-cli exec` command family for scripts and AI agents (JSON output)
+- **Non-interactive CLI** — `dts exec` command family for scripts and AI agents (JSON output)
 - **Orchestrations** — list, filter, sort, inspect, suspend, resume, terminate, restart, purge, raise events, create new
 - **Entities** — list, inspect state, delete
 - **Schedules** — list, create, pause, resume, delete
@@ -28,7 +28,7 @@ go install github.com/microsoft/durabletask-scheduler/cli@latest
 Or build from source:
 
 ```bash
-go build -o dts-cli .
+go build -o dts .
 ```
 
 ## Quick Start
@@ -39,13 +39,13 @@ The interactive dashboard includes a visual timeline view for orchestration deta
 
 ```bash
 # Launch with flags
-dts-cli --url https://your-scheduler.durabletask.io --taskhub default
+dts --url https://your-scheduler.durabletask.io --taskhub default
 
 # Connect to the local DTS emulator (no auth, HTTP)
-dts-cli --url http://localhost:8080 --taskhub default --auth-mode none
+dts --url http://localhost:8080 --taskhub default --auth-mode none
 
 # Or configure a context first, then launch
-dts-cli
+dts
 # Use 'a' in Home view to add an endpoint
 ```
 
@@ -55,86 +55,86 @@ All `exec` commands return JSON to stdout. Errors are written as JSON to stderr 
 
 ```bash
 # Check connectivity
-dts-cli exec ping --url https://my-scheduler.durabletask.io --taskhub default --auth-mode cli
+dts exec ping --url https://my-scheduler.durabletask.io --taskhub default --auth-mode cli
 
 # List orchestrations
-dts-cli exec orchestrations list --url https://my-scheduler.durabletask.io --taskhub default
+dts exec orch list --url https://my-scheduler.durabletask.io --taskhub default
 
 # Filter by status
-dts-cli exec orch list --status Running,Failed --page-size 10
+dts exec orch list --status Running,Failed --page-size 10
 
 # Get orchestration detail
-dts-cli exec orch get <instance-id>
+dts exec orch get <instance-id>
 
 # Get orchestration input/output/failure details
-dts-cli exec orch payloads <instance-id>
+dts exec orch payloads <instance-id>
 
 # Get execution history
-dts-cli exec orch history <instance-id>
+dts exec orch history <instance-id>
 
 # Create an orchestration
-dts-cli exec orch create --name MyOrchestrator --input '{"key":"value"}'
+dts exec orch create --name MyOrchestrator --input '{"key":"value"}'
 
 # Suspend / Resume / Terminate
-dts-cli exec orch suspend <instance-id> --reason "maintenance"
-dts-cli exec orch resume <instance-id>
-dts-cli exec orch terminate <instance-id> --reason "cancelled"
+dts exec orch suspend <instance-id> --reason "maintenance"
+dts exec orch resume <instance-id>
+dts exec orch terminate <instance-id> --reason "cancelled"
 
 # Force-terminate multiple orchestrations
-dts-cli exec orch force-terminate --ids id1,id2,id3 --reason "bulk cleanup"
+dts exec orch force-terminate --ids id1,id2,id3 --reason "bulk cleanup"
 
 # Restart / Rewind / Purge
-dts-cli exec orch restart <instance-id>
-dts-cli exec orch rewind <instance-id> --reason "retry after fix"
-dts-cli exec orch purge <instance-id>
+dts exec orch restart <instance-id>
+dts exec orch rewind <instance-id> --reason "retry after fix"
+dts exec orch purge <instance-id>
 
 # Raise an event
-dts-cli exec orch raise-event <instance-id> --event-name Approval --data '{"approved":true}'
+dts exec orch raise-event <instance-id> --event-name Approval --data '{"approved":true}'
 
 # List entities
-dts-cli exec entities list --name-starts-with MyEntity
+dts exec ent list --name-starts-with MyEntity
 
 # Get entity state
-dts-cli exec ent state <instance-id>
+dts exec ent state <instance-id>
 
 # Delete entities
-dts-cli exec ent delete <instance-id>
+dts exec ent delete <instance-id>
 
 # List schedules
-dts-cli exec schedules list
+dts exec sched list
 
 # Create a schedule
-dts-cli exec sched create --schedule-id daily-job --orchestration-name MyOrch --interval PT24H
+dts exec sched create --schedule-id daily-job --orchestration-name MyOrch --interval PT24H
 
 # Pause / Resume / Delete a schedule
-dts-cli exec sched pause <schedule-id>
-dts-cli exec sched resume <schedule-id>
-dts-cli exec sched delete <schedule-id>
+dts exec sched pause <schedule-id>
+dts exec sched resume <schedule-id>
+dts exec sched delete <schedule-id>
 
 # List workers
-dts-cli exec workers list
+dts exec work list
 
 # List agent sessions
-dts-cli exec agents list
+dts exec ag list
 
 # Start an agent session
-dts-cli exec ag start --name MyAgent --session-id session1 --prompt "Hello"
+dts exec ag start --name MyAgent --session-id session1 --prompt "Hello"
 
 # Send a prompt to an existing session
-dts-cli exec ag send --name MyAgent --session-id session1 --prompt "What next?"
+dts exec ag send --name MyAgent --session-id session1 --prompt "What next?"
 
 # Get agent session state
-dts-cli exec ag state --name MyAgent --session-id session1
+dts exec ag state --name MyAgent --session-id session1
 
 # Delete agent sessions
-dts-cli exec ag delete @agent@MyAgent@session1
+dts exec ag delete @agent@MyAgent@session1
 ```
 
 ## Configuration
 
 Config is stored at:
-- **Windows**: `%APPDATA%\dts-cli\config.yaml`
-- **Linux/macOS**: `~/.config/dts-cli/config.yaml`
+- **Windows**: `%APPDATA%\dts\config.yaml`
+- **Linux/macOS**: `~/.config/dts/config.yaml`
 
 ```yaml
 currentContext: my-dev
@@ -325,7 +325,7 @@ Check connectivity to the DTS backend.
 
 ## Authentication
 
-dts-cli uses [Azure Identity](https://github.com/Azure/azure-sdk-for-go/tree/main/sdk/azidentity) with scope `https://durabletask.io/.default`.
+dts uses [Azure Identity](https://github.com/Azure/azure-sdk-for-go/tree/main/sdk/azidentity) with scope `https://durabletask.io/.default`.
 
 | Mode | Description |
 |------|-------------|

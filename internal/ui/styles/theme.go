@@ -1,4 +1,4 @@
-// Package styles defines color themes for the dts-cli TUI.
+// Package styles defines color themes for the dts TUI.
 package styles
 
 import "github.com/gdamore/tcell/v2"

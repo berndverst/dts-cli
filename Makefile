@@ -20,7 +20,7 @@ else
     RM       = rm -f
 endif
 
-.PHONY: build clean test vet fmt install build-linux build-darwin build-windows build-all
+.PHONY: build clean test vet fmt install build-linux build-darwin build-windows build-all integration-test
 
 build:
 	go build $(LDFLAGS) -o bin/$(BINARY)$(EXE) .
@@ -36,6 +36,9 @@ vet:
 
 fmt:
 	gofmt -s -w .
+
+integration-test:
+	go test -tags integration -v -count=1 ./test/integration/...
 
 clean:
 ifeq ($(OS),Windows_NT)

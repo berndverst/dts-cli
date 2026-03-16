@@ -78,7 +78,7 @@ func newScheduleCreateCmd() *cobra.Command {
 			req := &api.CreateScheduleRequest{
 				ScheduleID:        scheduleID,
 				OrchestrationName: orchName,
-				Interval:          interval,
+				Interval:          toTimeSpan(interval),
 			}
 
 			if v, _ := c.Flags().GetString("input"); v != "" {

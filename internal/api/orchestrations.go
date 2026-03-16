@@ -120,7 +120,7 @@ func (c *Client) PurgeOrchestrations(ctx context.Context, instanceIDs []string) 
 func (c *Client) SuspendOrchestration(ctx context.Context, instanceID, reason string) error {
 	event := map[string]interface{}{
 		"executionSuspended": map[string]interface{}{
-			"reason": reason,
+			"input": reason,
 		},
 	}
 	return c.addHistoryEvent(ctx, instanceID, event)
@@ -130,7 +130,7 @@ func (c *Client) SuspendOrchestration(ctx context.Context, instanceID, reason st
 func (c *Client) ResumeOrchestration(ctx context.Context, instanceID, reason string) error {
 	event := map[string]interface{}{
 		"executionResumed": map[string]interface{}{
-			"reason": reason,
+			"input": reason,
 		},
 	}
 	return c.addHistoryEvent(ctx, instanceID, event)
@@ -140,7 +140,7 @@ func (c *Client) ResumeOrchestration(ctx context.Context, instanceID, reason str
 func (c *Client) TerminateOrchestration(ctx context.Context, instanceID, reason string) error {
 	event := map[string]interface{}{
 		"executionTerminated": map[string]interface{}{
-			"reason": reason,
+			"input": reason,
 		},
 	}
 	return c.addHistoryEvent(ctx, instanceID, event)
@@ -150,7 +150,7 @@ func (c *Client) TerminateOrchestration(ctx context.Context, instanceID, reason 
 func (c *Client) RewindOrchestration(ctx context.Context, instanceID, reason string) error {
 	event := map[string]interface{}{
 		"executionRewound": map[string]interface{}{
-			"reason": reason,
+			"input": reason,
 		},
 	}
 	return c.addHistoryEvent(ctx, instanceID, event)

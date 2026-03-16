@@ -316,8 +316,7 @@ type ExecutionFailedEvent struct {
 
 // ExecutionTerminatedEvent contains data for an ExecutionTerminated history event.
 type ExecutionTerminatedEvent struct {
-	Input  json.RawMessage `json:"input,omitempty"`
-	Reason string          `json:"reason,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
 }
 
 // TaskScheduledEvent contains data for a TaskScheduled history event.
@@ -387,12 +386,12 @@ type EventSentEvent struct {
 
 // ExecutionSuspendedEvent contains data for an ExecutionSuspended history event.
 type ExecutionSuspendedEvent struct {
-	Reason string `json:"reason,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
 }
 
 // ExecutionResumedEvent contains data for an ExecutionResumed history event.
 type ExecutionResumedEvent struct {
-	Reason string `json:"reason,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
 }
 
 // --- Entity Models ---
@@ -510,14 +509,20 @@ type SchedulesResult struct {
 
 // CreateScheduleRequest is the request body for POST /schedules.
 type CreateScheduleRequest struct {
-	ScheduleID              string     `json:"ScheduleId"`
-	OrchestrationName       string     `json:"OrchestrationName"`
-	Interval                string     `json:"Interval"`
-	OrchestrationInput      string     `json:"OrchestrationInput,omitempty"`
-	OrchestrationInstanceID string     `json:"OrchestrationInstanceId,omitempty"`
-	StartAt                 *time.Time `json:"StartAt,omitempty"`
-	EndAt                   *time.Time `json:"EndAt,omitempty"`
-	StartImmediatelyIfLate  bool       `json:"StartImmediatelyIfLate"`
+	ScheduleID              string                `json:"ScheduleId"`
+	OrchestrationName       string                `json:"OrchestrationName"`
+	Interval                string                `json:"Interval"`
+	OrchestrationInput      string                `json:"OrchestrationInput,omitempty"`
+	OrchestrationInstanceID string                `json:"OrchestrationInstanceId,omitempty"`
+	StartAt                 *time.Time            `json:"StartAt,omitempty"`
+	EndAt                   *time.Time            `json:"EndAt,omitempty"`
+	StartImmediatelyIfLate  bool                  `json:"StartImmediatelyIfLate"`
+	Options                 CreateScheduleOptions `json:"Options"`
+}
+
+// CreateScheduleOptions contains optional schedule configuration.
+type CreateScheduleOptions struct {
+	// Add fields as needed by the scheduler API.
 }
 
 // --- Worker Models ---
