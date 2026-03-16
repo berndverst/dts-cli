@@ -43,10 +43,23 @@ func (c *Client) GetAgentState(ctx context.Context, name, sessionID string) (*Ag
 // StartAgentSession starts a new agent session by creating an orchestration
 // that signals the agent entity.
 func (c *Client) StartAgentSession(ctx context.Context, agentName, sessionID, prompt string) (string, error) {
+	input := struct {
+		SessionID string `json:"sessionId"`
+		Prompt    string `json:"prompt"`
+	}{
+		SessionID: sessionID,
+		Prompt:    prompt,
+	}
+
+	inputBytes, err := json.Marshal(input)
+	if err != nil {
+		return "", fmt.Errorf("marshaling agent session input: %w", err)
+	}
+
 	req := &CreateOrchestrationRequest{
 		Name:       agentName,
 		InstanceID: fmt.Sprintf("agent-%s-%s", agentName, sessionID),
-		Input:      fmt.Sprintf(`{"sessionId":"%s","prompt":"%s"}`, sessionID, escapeJSON(prompt)),
+		Input:      string(inputBytes),
 	}
 	return c.CreateOrchestration(ctx, req)
 }
@@ -54,7 +67,18 @@ func (c *Client) StartAgentSession(ctx context.Context, agentName, sessionID, pr
 // SendAgentPrompt sends an event to an existing agent session's orchestration.
 func (c *Client) SendAgentPrompt(ctx context.Context, agentName, sessionID, prompt string) error {
 	instanceID := fmt.Sprintf("agent-%s-%s", agentName, sessionID)
-	return c.RaiseEvent(ctx, instanceID, "UserPrompt", fmt.Sprintf(`{"prompt":"%s"}`, escapeJSON(prompt)))
+	payload := struct {
+		Prompt string `json:"prompt"`
+	}{
+		Prompt: prompt,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshaling agent prompt: %w", err)
+	}
+
+	return c.RaiseEvent(ctx, instanceID, "UserPrompt", string(payloadBytes))
 }
 
 // DeleteAgentSession deletes an agent entity by its instance ID.
@@ -86,11 +110,4 @@ func ParseAgentEntity(entity *Entity) *AgentEntity {
 	}
 }
 
-func escapeJSON(s string) string {
-	b, _ := json.Marshal(s)
-	// Remove surrounding quotes from json.Marshal
-	if len(b) >= 2 {
-		return string(b[1 : len(b)-1])
-	}
-	return s
-}
+
