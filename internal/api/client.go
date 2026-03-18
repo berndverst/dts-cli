@@ -36,6 +36,7 @@ func NewClient(baseURL, taskHub string, tokenProvider *auth.TokenProvider) *Clie
 		ForceAttemptHTTP2:  true,
 		DisableCompression: false,
 	}
+
 	return &Client{
 		baseURL: baseURL,
 		taskHub: taskHub,

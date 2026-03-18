@@ -231,6 +231,7 @@ func (v *OrchestrationsView) Init(ctx context.Context) {
 	result, err := v.app.Client.QueryOrchestrations(ctx, req)
 	if err != nil {
 		v.app.QueueUpdateDraw(func() {
+			v.summary.SetText(" [red]Error: " + tview.Escape(err.Error()) + "[-]")
 			v.app.FlashError("Failed: " + err.Error())
 		})
 		return

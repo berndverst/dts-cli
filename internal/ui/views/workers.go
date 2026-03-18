@@ -58,6 +58,7 @@ func (v *WorkersView) Init(ctx context.Context) {
 	result, err := v.app.Client.ListWorkers(ctx)
 	if err != nil {
 		v.app.QueueUpdateDraw(func() {
+			v.info.SetText(" [red]Error: " + tview.Escape(err.Error()) + "[-]")
 			v.app.FlashError("Failed: " + err.Error())
 		})
 		return

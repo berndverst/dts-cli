@@ -93,6 +93,7 @@ func (v *AgentsView) Init(ctx context.Context) {
 	result, err := v.app.Client.ListAgentSessions(ctx, v.app.Config.Settings.PageSize, 0)
 	if err != nil {
 		v.app.QueueUpdateDraw(func() {
+			v.info.SetText(" [red]Error: " + tview.Escape(err.Error()) + "[-]")
 			v.app.FlashError("Failed: " + err.Error())
 		})
 		return

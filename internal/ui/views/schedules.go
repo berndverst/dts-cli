@@ -114,6 +114,7 @@ func (v *SchedulesView) Init(ctx context.Context) {
 	result, err := v.app.Client.ListSchedules(ctx, v.currentToken)
 	if err != nil {
 		v.app.QueueUpdateDraw(func() {
+			v.info.SetText(" [red]Error: " + tview.Escape(err.Error()) + "[-]")
 			v.app.FlashError("Failed: " + err.Error())
 		})
 		return

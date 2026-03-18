@@ -43,12 +43,33 @@ The interactive dashboard includes a visual timeline view for orchestration deta
 dts --url https://your-scheduler.durabletask.io --taskhub default
 
 # Connect to the local DTS emulator (no auth, HTTP)
-dts --url http://localhost:8080 --taskhub default --auth-mode none
+dts --url http://localhost:8081 --taskhub default --auth-mode none
 
 # Or configure a context first, then launch
 dts
 # Use 'a' in Home view to add an endpoint
 ```
+
+> [!IMPORTANT]
+> The DTS emulator must be running with port 8081 exposed for the CLI to connect. The following Docker command will start the emulator with the correct settings:
+>
+> **Bash**
+>
+> ```bash
+> docker run -d --name=dts-emulator \
+>     --env=DTS_USE_DYNAMIC_TASK_HUBS=true \
+>     -p 8080:8080 -p 8081:8081 -p 8082:8082 \
+>     mcr.microsoft.com/dts/dts-emulator:latest
+> ```
+>
+> **PowerShell**
+>
+> ```powershell
+> docker run -d --name=dts-emulator `
+>     --env=DTS_USE_DYNAMIC_TASK_HUBS=true `
+>     -p 8080:8080 -p 8081:8081 -p 8082:8082 `
+>     mcr.microsoft.com/dts/dts-emulator:latest
+> ```
 
 ### Non-Interactive Commands (`exec`)
 

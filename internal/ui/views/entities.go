@@ -137,6 +137,7 @@ func (v *EntitiesView) Init(ctx context.Context) {
 	result, err := v.app.Client.QueryEntities(ctx, req)
 	if err != nil {
 		v.app.QueueUpdateDraw(func() {
+			v.info.SetText(" [red]Error: " + tview.Escape(err.Error()) + "[-]")
 			v.app.FlashError("Failed: " + err.Error())
 		})
 		return
