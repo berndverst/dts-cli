@@ -112,10 +112,10 @@ func (v *WorkersView) Init(ctx context.Context) {
 	})
 }
 
-// formatUtilization renders "active/normalized  [bar]" for a single category.
+// formatUtilization renders a saturation bar whose fill uses the normalized
+// maximum (dashboard-style headroom) but whose label shows the original max.
 func formatUtilization(active, max int) string {
-	norm := util.NormalizeMaximumCount(max)
-	return util.SaturationBar(active, norm, 8)
+	return util.NormalizedSaturationBar(active, max, 8)
 }
 
 // filterSummary returns a compact one-line summary of a worker's filters.

@@ -1,6 +1,9 @@
 package util
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNormalizeMaximumCount(t *testing.T) {
 	tests := []struct {
@@ -39,4 +42,60 @@ func TestSaturationBarThresholds(t *testing.T) {
 	if bar == "" {
 		t.Fatal("SaturationBar(200,100,10) returned empty string")
 	}
+}
+
+func TestSaturationBarColorBoundaries(t *testing.T) {
+	tests := []struct {
+		name      string
+		active    int
+		max       int
+		wantColor string // expected tview color tag in the bar
+	}{
+		{"0% green", 0, 100, "[green]"},
+		{"64% green", 64, 100, "[green]"},
+		{"65% yellow", 65, 100, "[yellow]"},
+		{"84% yellow", 84, 100, "[yellow]"},
+		{"85% red", 85, 100, "[red]"},
+		{"100% red", 100, 100, "[red]"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bar := SaturationBar(tc.active, tc.max, 10)
+			if !containsString(bar, tc.wantColor) {
+				t.Errorf("SaturationBar(%d, %d, 10) = %q, want color %s", tc.active, tc.max, bar, tc.wantColor)
+			}
+		})
+	}
+}
+
+func TestNormalizedSaturationBarDisplaysOriginalMax(t *testing.T) {
+	// NormalizedSaturationBar should display the original max (20), not the
+	// normalized one (40), while using normalized max for fill/color.
+	bar := NormalizedSaturationBar(4, 20, 10)
+	if !containsString(bar, "4/20") {
+		t.Errorf("NormalizedSaturationBar(4,20,10) = %q, want label 4/20", bar)
+	}
+
+	// Zero max should show "?".
+	bar = NormalizedSaturationBar(0, 0, 10)
+	if !containsString(bar, "0/?") {
+		t.Errorf("NormalizedSaturationBar(0,0,10) = %q, want label 0/?", bar)
+	}
+}
+
+func TestSaturationBarFallbackWidth(t *testing.T) {
+	// When max is 0, the empty bar should respect the width parameter.
+	bar8 := SaturationBar(0, 0, 8)
+	bar12 := SaturationBar(0, 0, 12)
+	if containsString(bar8, "░░░░░░░░░░░░") {
+		t.Errorf("SaturationBar(0,0,8) shouldn't have 12 empty chars: %q", bar8)
+	}
+	if !containsString(bar12, "░░░░░░░░░░░░") {
+		t.Errorf("SaturationBar(0,0,12) should have 12 empty chars: %q", bar12)
+	}
+}
+
+func containsString(s, substr string) bool {
+	return len(s) > 0 && len(substr) > 0 && strings.Contains(s, substr)
 }

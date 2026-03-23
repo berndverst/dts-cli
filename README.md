@@ -329,7 +329,7 @@ Check connectivity to the DTS backend.
 
 | Key | Action |
 |-----|--------|
-| `j`/`k` | Navigate workers (filter panel updates inline) |
+| `\u2191` / `\u2193` | Navigate workers (filter panel updates inline) |
 | `r` | Refresh |
 
 ### Schedules

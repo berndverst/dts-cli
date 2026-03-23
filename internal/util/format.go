@@ -185,7 +185,8 @@ func NormalizeMaximumCount(count int) int {
 // Thresholds are aligned with the Durable Task Scheduler Dashboard (65% warn, 85% error).
 func SaturationBar(active, max int, width int) string {
 	if max <= 0 {
-		return fmt.Sprintf("[░░░░░░░░░░] %d/?", active)
+		emptyBar := strings.Repeat("░", width)
+		return fmt.Sprintf("[%s] %d/?", emptyBar, active)
 	}
 	ratio := float64(active) / float64(max)
 	if ratio > 1 {
@@ -194,18 +195,41 @@ func SaturationBar(active, max int, width int) string {
 	filled := int(ratio * float64(width))
 	empty := width - filled
 
-	var color string
+	bar := saturationColor(ratio) + strings.Repeat("█", filled) + "[gray]" + strings.Repeat("░", empty) + "[white]"
+	return fmt.Sprintf("[%s] %d/%d", bar, active, max)
+}
+
+// NormalizedSaturationBar renders a saturation bar where the fill and color
+// are based on the normalized maximum (providing dashboard-style headroom)
+// while the label displays the original max count. When max is 0 the bar
+// shows "?" to indicate unknown capacity.
+func NormalizedSaturationBar(active, max, width int) string {
+	if max <= 0 {
+		emptyBar := strings.Repeat("░", width)
+		return fmt.Sprintf("[%s] %d/?", emptyBar, active)
+	}
+	norm := NormalizeMaximumCount(max)
+	ratio := float64(active) / float64(norm)
+	if ratio > 1 {
+		ratio = 1
+	}
+	filled := int(ratio * float64(width))
+	empty := width - filled
+
+	bar := saturationColor(ratio) + strings.Repeat("█", filled) + "[gray]" + strings.Repeat("░", empty) + "[white]"
+	return fmt.Sprintf("[%s] %d/%d", bar, active, max)
+}
+
+// saturationColor returns the tview color tag for a saturation ratio.
+func saturationColor(ratio float64) string {
 	switch {
 	case ratio >= 0.85:
-		color = "[red]"
+		return "[red]"
 	case ratio >= 0.65:
-		color = "[yellow]"
+		return "[yellow]"
 	default:
-		color = "[green]"
+		return "[green]"
 	}
-
-	bar := color + strings.Repeat("█", filled) + "[gray]" + strings.Repeat("░", empty) + "[white]"
-	return fmt.Sprintf("[%s] %d/%d", bar, active, max)
 }
 
 // MustMarshal marshals a value to a JSON string, returning "" on error.

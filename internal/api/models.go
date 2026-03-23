@@ -546,7 +546,7 @@ type WorkItemFilters struct {
 	Entities       []WorkItemFilter `json:"entities"`
 }
 
-// WorkItemFilter describes a single name+version filter for a work item type.
+// WorkItemFilter describes a single name + optional version filter for a work item type.
 type WorkItemFilter struct {
 	Name    string  `json:"name"`
 	Version *string `json:"version,omitempty"`
