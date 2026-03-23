@@ -166,7 +166,23 @@ func ScheduleStatusColor(status int) string {
 	}
 }
 
+// NormalizeMaximumCount adjusts a worker's max concurrency for display purposes,
+// matching the Durable Task Scheduler Dashboard normalization logic.
+// It prevents overly tight gauges by allowing headroom. If count is 0 the
+// result is clamped to 1 to avoid division-by-zero in saturation calculations.
+func NormalizeMaximumCount(count int) int {
+	n := count + 100
+	if d := 2 * count; d < n {
+		n = d
+	}
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
 // SaturationBar renders an ASCII progress bar like [████░░░░░░] 4/10.
+// Thresholds are aligned with the Durable Task Scheduler Dashboard (65% warn, 85% error).
 func SaturationBar(active, max int, width int) string {
 	if max <= 0 {
 		return fmt.Sprintf("[░░░░░░░░░░] %d/?", active)
@@ -180,9 +196,9 @@ func SaturationBar(active, max int, width int) string {
 
 	var color string
 	switch {
-	case ratio >= 0.9:
+	case ratio >= 0.85:
 		color = "[red]"
-	case ratio >= 0.7:
+	case ratio >= 0.65:
 		color = "[yellow]"
 	default:
 		color = "[green]"
