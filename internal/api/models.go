@@ -529,13 +529,27 @@ type CreateScheduleOptions struct {
 
 // Worker represents a connected worker.
 type Worker struct {
-	WorkerID                  string `json:"workerId"`
-	ActiveOrchestrationsCount int    `json:"activeOrchestrationsCount"`
-	MaxOrchestrationsCount    int    `json:"maxOrchestrationsCount"`
-	ActiveActivitiesCount     int    `json:"activeActivitiesCount"`
-	MaxActivitiesCount        int    `json:"maxActivitiesCount"`
-	ActiveEntitiesCount       int    `json:"activeEntitiesCount"`
-	MaxEntitiesCount          int    `json:"maxEntitiesCount"`
+	WorkerID                  string           `json:"workerId"`
+	ActiveOrchestrationsCount int              `json:"activeOrchestrationsCount"`
+	MaxOrchestrationsCount    int              `json:"maxOrchestrationsCount"`
+	ActiveActivitiesCount     int              `json:"activeActivitiesCount"`
+	MaxActivitiesCount        int              `json:"maxActivitiesCount"`
+	ActiveEntitiesCount       int              `json:"activeEntitiesCount"`
+	MaxEntitiesCount          int              `json:"maxEntitiesCount"`
+	WorkItemFilters           *WorkItemFilters `json:"workItemFilters,omitempty"`
+}
+
+// WorkItemFilters describes the work item filters configured on a worker.
+type WorkItemFilters struct {
+	Orchestrations []WorkItemFilter `json:"orchestrations"`
+	Activities     []WorkItemFilter `json:"activities"`
+	Entities       []WorkItemFilter `json:"entities"`
+}
+
+// WorkItemFilter describes a single name+version filter for a work item type.
+type WorkItemFilter struct {
+	Name    string  `json:"name"`
+	Version *string `json:"version,omitempty"`
 }
 
 // WorkersResult is the response from listing workers.

@@ -12,7 +12,7 @@ A k9s-style terminal UI for [Durable Task Scheduler](https://learn.microsoft.com
 - **Orchestrations** — list, filter, sort, inspect, suspend, resume, terminate, restart, purge, raise events, create new
 - **Entities** — list, inspect state, delete
 - **Schedules** — list, create, pause, resume, delete
-- **Workers** — view active/max counts with saturation bars
+- **Workers** — view per-category utilization (orchestrations, activities, entities) with normalized saturation bars and work item filters
 - **Agents** (preview) — start sessions, send prompts, view conversations
 - **Multi-context** — kubectl-style named endpoints with quick switching
 - **Azure AD auth** — DefaultAzureCredential, browser, CLI, device code
@@ -240,7 +240,7 @@ Check connectivity to the DTS backend.
 
 | Subcommand | Arguments / Flags | Description |
 |------------|-------------------|-------------|
-| `list` | | List connected workers |
+| `list` | | List connected workers with utilization and work item filters |
 
 ### `exec agents` (alias: `ag`)
 
@@ -324,6 +324,13 @@ Check connectivity to the DTS backend.
 | `d` | Delete selected |
 | `Space` | Toggle select |
 | `[` / `]` | Page |
+
+### Workers
+
+| Key | Action |
+|-----|--------|
+| `j`/`k` | Navigate workers (filter panel updates inline) |
+| `r` | Refresh |
 
 ### Schedules
 
