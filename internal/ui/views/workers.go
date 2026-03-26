@@ -95,7 +95,7 @@ func (v *WorkersView) Init(ctx context.Context) {
 
 		for i, w := range v.workers {
 			v.table.SetDataRow(i,
-				util.Truncate(w.WorkerID, 50),
+				util.Truncate(tview.Escape(w.WorkerID), 50),
 				formatUtilization(w.ActiveOrchestrationsCount, w.MaxOrchestrationsCount),
 				formatUtilization(w.ActiveActivitiesCount, w.MaxActivitiesCount),
 				formatUtilization(w.ActiveEntitiesCount, w.MaxEntitiesCount),
@@ -176,9 +176,9 @@ func (v *WorkersView) renderDetail(w api.Worker) {
 		names := make([]string, len(sorted))
 		for i, f := range sorted {
 			if showVersion && f.Version != nil {
-				names[i] = fmt.Sprintf("%s (v%s)", f.Name, *f.Version)
+				names[i] = fmt.Sprintf("%s (v%s)", tview.Escape(f.Name), tview.Escape(*f.Version))
 			} else {
-				names[i] = f.Name
+				names[i] = tview.Escape(f.Name)
 			}
 		}
 		b.WriteString(strings.Join(names, ", "))
